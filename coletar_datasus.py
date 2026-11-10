@@ -20,6 +20,7 @@ Uso:
   python coletar_datasus.py           -> tudo (27 estados x 14 meses + nacional), em evidencias/
 Se for interrompido, rodar de novo continua de onde parou.
 """
+import os
 import re
 import sys
 import time
@@ -76,10 +77,21 @@ def num_br(s):
     return float(s.replace(".", "").replace(",", "."))
 
 
+def fonte_legenda(tamanho=15):
+    """Arial do Windows; em outro sistema (ou sem a Arial), uma fonte equivalente ou a padrão do Pillow."""
+    windir = os.environ.get("WINDIR", "C:/Windows")
+    for nome in (f"{windir}/Fonts/arial.ttf", "arial.ttf", "DejaVuSans.ttf", "LiberationSans-Regular.ttf"):
+        try:
+            return ImageFont.truetype(nome, tamanho)
+        except OSError:
+            continue
+    return ImageFont.load_default(size=tamanho)
+
+
 def legenda_png(caminho_png, linhas):
     """Põe uma faixa ACIMA do print (fora da página) com endereço e data/hora da consulta."""
     img = Image.open(caminho_png).convert("RGB")
-    fonte = ImageFont.truetype("C:/Windows/Fonts/arial.ttf", 15)
+    fonte = fonte_legenda()
     altura = 12 + 22 * len(linhas)
     nova = Image.new("RGB", (img.width, img.height + altura), (40, 40, 40))
     d = ImageDraw.Draw(nova)
