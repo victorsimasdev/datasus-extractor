@@ -5,7 +5,10 @@ Regras (versionamento semântico, uma subida por release, pela mudança mais for
 - `release:`, `tipo!:` ou `BREAKING CHANGE` no corpo -> sobe o primeiro número (2.4.3 -> 3.0.0)
 - `feat:`                                           -> sobe o do meio        (2.4.3 -> 2.5.0)
 - `fix:`                                            -> sobe o último         (2.4.3 -> 2.4.4)
-- docs, chore, ci, test, refactor e o resto          -> não geram versão
+- qualquer commit que mude o requirements.txt        -> sobe o último (dependência do programa, ex.: PRs
+                                                        do Dependabot com correções de segurança)
+- docs, chore, ci, test, refactor e o resto          -> não geram versão (requirements-dev.txt e actions
+                                                        do GitHub não chegam a quem usa o programa)
 
 Se a versão do pyproject.toml já estiver à frente da última tag (subida à mão), vale a maior das duas.
 
@@ -26,21 +29,43 @@ INIT = RAIZ / "extrator" / "__init__.py"
 CHANGELOG = RAIZ / "CHANGELOG.md"
 NAO_LANCADO = "## [Não lançado]"
 
-PESO = {None: 0, "correcao": 1, "menor": 2, "maior": 3}
+PESO = {None: 0, "dependencias": 1, "correcao": 1, "menor": 2, "maior": 3}
+DEPENDENCIAS_DO_PROGRAMA = "requirements.txt"
 RE_ASSUNTO = re.compile(r"^(?P<tipo>[a-z]+)(?:\([^)]*\))?(?P<quebra>!)?:\s*(?P<texto>.+)$")
+RE_BUMP = re.compile(r"^bump (?P<pacote>\S+) from (?P<de>\S+) to (?P<para>\S+)", re.I)
 RE_VERSAO = re.compile(r"^\d+\.\d+\.\d+$")
-SECOES = (("maior", "Mudanças incompatíveis"), ("menor", "Adicionado"), ("correcao", "Corrigido"))
+SECOES = (("maior", "Mudanças incompatíveis"), ("menor", "Adicionado"), ("correcao", "Corrigido"),
+          ("dependencias", "Dependências"))
 
 
-def classificar(assunto, corpo=""):
-    """Quanto um commit sobe a versão: "maior", "menor", "correcao" ou None."""
+def classificar(assunto, corpo="", arquivos=()):
+    """Quanto um commit sobe a versão: "maior", "menor", "correcao", "dependencias" ou None."""
     m = RE_ASSUNTO.match(assunto.strip())
-    if not m:
-        return None
-    tipo = m["tipo"]
-    if tipo == "release" or m["quebra"] or re.search(r"^BREAKING[ -]CHANGE:", corpo or "", re.M):
-        return "maior"
-    return {"feat": "menor", "fix": "correcao"}.get(tipo)
+    nivel = None
+    if m:
+        if m["tipo"] == "release" or m["quebra"] or re.search(r"^BREAKING[ -]CHANGE:", corpo or "", re.M):
+            nivel = "maior"
+        else:
+            nivel = {"feat": "menor", "fix": "correcao"}.get(m["tipo"])
+    if nivel is None and DEPENDENCIAS_DO_PROGRAMA in arquivos:
+        nivel = "dependencias"
+    return nivel
+
+
+def _desempacotar(commit):
+    """Commit como (assunto, corpo) ou (assunto, corpo, arquivos)."""
+    assunto, corpo, *resto = commit
+    return assunto, corpo, tuple(resto[0]) if resto else ()
+
+
+def _texto(assunto):
+    """Texto da nota: sem o prefixo; "bump X from A to B" vira "X A → B"."""
+    m = RE_ASSUNTO.match(assunto.strip())
+    texto = m["texto"] if m else assunto.strip()
+    b = RE_BUMP.match(texto)
+    if b:
+        return f"{b['pacote']} {b['de']} → {b['para']}"
+    return texto[:1].upper() + texto[1:]
 
 
 def proxima(versao, nivel):
@@ -50,24 +75,25 @@ def proxima(versao, nivel):
         return f"{maior + 1}.0.0"
     if nivel == "menor":
         return f"{maior}.{menor + 1}.0"
-    if nivel == "correcao":
+    if nivel in ("correcao", "dependencias"):
         return f"{maior}.{menor}.{correcao + 1}"
     return None
 
 
 def nivel_da_release(commits):
-    """A mudança mais forte entre os commits [(assunto, corpo), ...]."""
-    return max((classificar(a, c) for a, c in commits), key=PESO.get, default=None)
+    """A mudança mais forte entre os commits [(assunto, corpo[, arquivos]), ...]."""
+    niveis = [classificar(*_desempacotar(c)) for c in commits]
+    return max(niveis, key=PESO.get, default=None)
 
 
 def notas_dos_commits(commits):
     """Notas em Markdown, agrupadas como no CHANGELOG. Só entram commits que sobem a versão."""
     grupos = {n: [] for n, _ in SECOES}
-    for assunto, corpo in commits:
-        nivel = classificar(assunto, corpo)
+    for commit in commits:
+        assunto, corpo, arquivos = _desempacotar(commit)
+        nivel = classificar(assunto, corpo, arquivos)
         if nivel:
-            texto = RE_ASSUNTO.match(assunto.strip())["texto"]
-            grupos[nivel].append(texto[:1].upper() + texto[1:])
+            grupos[nivel].append(_texto(assunto))
     blocos = [f"### {titulo}\n" + "\n".join(f"- {t}" for t in grupos[n]) for n, titulo in SECOES if grupos[n]]
     return "\n\n".join(blocos)
 
@@ -87,8 +113,14 @@ def ultima_tag():
 
 def commits_desde(tag):
     faixa = f"{tag}..HEAD" if tag else "HEAD"
-    saida = _git("log", faixa, "--no-merges", "--format=%s%x1f%b%x1e")
-    return [tuple(bloco.strip("\n").split("\x1f", 1)) for bloco in saida.split("\x1e") if bloco.strip()]
+    saida = _git("log", faixa, "--no-merges", "--name-only", "--format=%x1e%s%x1f%b%x1f")
+    commits = []
+    for bloco in saida.split("\x1e"):
+        if not bloco.strip():
+            continue
+        assunto, corpo, nomes = bloco.split("\x1f", 2)
+        commits.append((assunto, corpo.strip(), tuple(n for n in nomes.split("\n") if n.strip())))
+    return commits
 
 
 # ---------------------------------------------------------------- arquivos

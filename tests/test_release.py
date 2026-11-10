@@ -105,3 +105,47 @@ def test_versao_forcada_invalida():
 ])
 def test_escolher(ultima, calculada, codigo, esperado):
     assert release.escolher(ultima, calculada, codigo) == esperado
+
+
+@pytest.mark.parametrize("assunto, arquivos, esperado", [
+    ("chore: bump pypdf from 6.21.4 to 7.0.0", ("requirements.txt",), "dependencias"),
+    ("chore(deps): bump pywebview from 6.1 to 6.2.1", ("requirements.txt",), "dependencias"),
+    ("chore: atualiza o playwright", ("requirements.txt", "README.md"), "dependencias"),
+    ("chore(deps-dev): bump ruff from 0.17.4 to 0.18.0", ("requirements-dev.txt",), None),
+    ("ci: bump actions/checkout from 4 to 7", (".github/workflows/testes.yml",), None),
+    ("feat: nova base", ("requirements.txt", "extrator/pedido.py"), "menor"),   # o mais forte vale
+])
+def test_dependencias_do_programa_sobem_o_ultimo(assunto, arquivos, esperado):
+    assert release.classificar(assunto, "", arquivos) == esperado
+
+
+def test_release_so_com_dependencias():
+    commits = [("chore: bump pypdf from 6.21.4 to 7.0.0", "", ("requirements.txt",)),
+               ("ci: bump actions/checkout from 4 to 7", "", (".github/workflows/testes.yml",))]
+    assert release.proxima("2.0.0", release.nivel_da_release(commits)) == "2.0.1"
+    assert release.notas_dos_commits(commits) == "### Dependências\n- pypdf 6.21.4 → 7.0.0"
+
+
+def test_notas_com_correcao_e_dependencia():
+    commits = [("fix: período errado", "", ("extrator/tabnet.py",)),
+               ("chore(deps): bump pywebview from 6.1 to 6.2.1", "", ("requirements.txt",))]
+    assert release.notas_dos_commits(commits) == ("### Corrigido\n- Período errado\n\n"
+                                                  "### Dependências\n- pywebview 6.1 → 6.2.1")
+
+
+def test_commits_desde_traz_os_arquivos(tmp_path, monkeypatch):
+    import subprocess
+
+    def git(*args):
+        subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", *args], cwd=tmp_path, check=True,
+                       capture_output=True)
+
+    git("init", "-q")
+    (tmp_path / "README.md").write_text("a", encoding="utf-8")
+    git("add", "."); git("commit", "-q", "-m", "docs: início"); git("tag", "v2.0.0")
+    (tmp_path / "requirements.txt").write_text("pypdf==7.0.0", encoding="utf-8")
+    git("add", "."); git("commit", "-q", "-m", "chore: bump pypdf from 6.21.4 to 7.0.0", "-m", "corpo")
+    monkeypatch.setattr(release, "RAIZ", tmp_path)
+    assert release.ultima_tag() == "v2.0.0"
+    assert release.commits_desde("v2.0.0") == [("chore: bump pypdf from 6.21.4 to 7.0.0", "corpo",
+                                               ("requirements.txt",))]
