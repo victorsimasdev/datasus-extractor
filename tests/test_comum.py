@@ -1,6 +1,6 @@
 import pytest
 
-from comum import DadosCorrompidos, copia_identica, gravar_json, impedir_suspensao, ler_json, sha256
+from extrator.comum import DadosCorrompidos, copia_identica, gravar_json, impedir_suspensao, ler_json, sha256
 
 
 def test_gravar_e_ler_json_preserva_acentos(tmp_path):

@@ -7,7 +7,7 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-OP = json.loads((Path(__file__).resolve().parent / "opcoes_formularios.json").read_text(encoding="utf-8"))
+OP = json.loads((Path(__file__).resolve().parent.parent / "extrator" / "opcoes_formularios.json").read_text(encoding="utf-8"))
 TODAS = "TODAS_AS_CATEGORIAS__"
 
 

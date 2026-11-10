@@ -19,7 +19,7 @@ from datetime import datetime
 from pathlib import Path
 
 from coletar_datasus import MESES, UFS
-from comum import DadosCorrompidos, gravar_json, impedir_suspensao, ler_json
+from extrator.comum import DadosCorrompidos, gravar_json, impedir_suspensao, ler_json
 
 PASTA = Path(__file__).resolve().parent
 LOG = PASTA / "execucao.log"

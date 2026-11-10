@@ -17,7 +17,7 @@ from datetime import datetime
 from pathlib import Path
 
 from coletar_perfil import todos_casos, todos_nacionais
-from comum import DadosCorrompidos, gravar_json, ler_json
+from extrator.comum import DadosCorrompidos, gravar_json, ler_json
 
 PASTA = Path(__file__).resolve().parent
 ARQ = PASTA / "dados_perfil.json"

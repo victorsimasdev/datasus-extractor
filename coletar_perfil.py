@@ -24,7 +24,7 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 
 from coletar_datasus import ABA, MESES, PASTA_NACIONAL, ROTULO_MES, UFS, Coletor
-from comum import DadosCorrompidos, gravar_json, ler_json
+from extrator.comum import DadosCorrompidos, gravar_json, ler_json
 
 PASTA = Path(__file__).resolve().parent
 

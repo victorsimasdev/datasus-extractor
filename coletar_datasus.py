@@ -30,7 +30,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 from playwright.sync_api import sync_playwright
 
-from comum import DadosCorrompidos, gravar_json, ler_json
+from extrator.comum import DadosCorrompidos, gravar_json, ler_json
 
 BASE = "https://tabnet.datasus.gov.br/cgi"
 CID_VALOR = "174"

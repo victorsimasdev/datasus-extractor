@@ -19,7 +19,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-from comum import DadosCorrompidos, copia_identica, gravar_json, impedir_suspensao, ler_json
+from extrator.comum import DadosCorrompidos, copia_identica, gravar_json, impedir_suspensao, ler_json
 
 PASTA = Path(__file__).resolve().parent
 PERFIL = "--perfil" in sys.argv

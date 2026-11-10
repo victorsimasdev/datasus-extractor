@@ -23,7 +23,7 @@ from pathlib import Path
 from tkinter import filedialog, simpledialog, ttk
 
 PASTA = Path(__file__).resolve().parent
-OPCOES = json.loads((PASTA / "opcoes_formularios.json").read_text(encoding="utf-8"))
+OPCOES = json.loads((PASTA.parent / "extrator" / "opcoes_formularios.json").read_text(encoding="utf-8"))
 SEGUNDOS_POR_CONSULTA = 20
 MESES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
 PASSOS = ["Base de dados", "Tabela", "Período", "Filtros", "Saída", "Revisar"]

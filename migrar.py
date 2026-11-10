@@ -23,7 +23,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-from comum import copia_identica
+from extrator.comum import copia_identica
 
 PASTA = Path(__file__).resolve().parent
 ARQ = PASTA / "dados_perfil.json"
