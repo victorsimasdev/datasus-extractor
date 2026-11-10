@@ -79,12 +79,12 @@ function toast(texto, tipo = "") {
   $("#toasts").append(el);
   setTimeout(() => el.remove(), 4200);
 }
-function confirmar(titulo, texto, ok = "Confirmar", perigo = false) {
+function confirmar(titulo, texto, ok = "Confirmar", perigo = false, cancelar = "Cancelar") {
   return new Promise((res) => {
     const f = document.createElement("div");
     f.className = "fundo-dialogo";
     f.innerHTML = `<div class="dialogo" role="dialog" aria-modal="true"><h3>${esc(titulo)}</h3><p>${esc(texto)}</p>
-      <div class="acoes"><button class="btn fantasma" data-r="0">Cancelar</button><button class="btn ${perigo ? "perigo" : "primario"}" data-r="1">${esc(ok)}</button></div></div>`;
+      <div class="acoes"><button class="btn fantasma" data-r="0">${esc(cancelar)}</button><button class="btn ${perigo ? "perigo" : "primario"}" data-r="1">${esc(ok)}</button></div></div>`;
     f.addEventListener("click", (e) => { const r = e.target.closest("[data-r]"); if (r || e.target === f) { f.remove(); res(r?.dataset.r === "1"); } });
     document.body.append(f);
     f.querySelector('[data-r="1"]').focus();
@@ -711,6 +711,33 @@ async function vigiarTema() {
   if (t !== S.prefs.tema_sistema) { S.prefs.tema_sistema = t; aplicarTema(); }
 }
 
+// ---------------------------------------------------------------- versão nova do programa
+async function verificarAtualizacao() {
+  const n = await api.verificar_atualizacao();
+  if (!n) return;
+  const versoes = `A versão ${n.versao} está disponível (você usa a ${n.atual}).`;
+  if (!n.pode_instalar) {
+    if (await confirmar("Há uma nova versão", versoes, "Ver a versão nova", false, "Agora não")) api.abrir_release();
+    return;
+  }
+  if (n.coleta_rodando) return toast(`${versoes} Ela será oferecida de novo quando não houver coleta em andamento.`);
+  if (!(await confirmar("Há uma nova versão", `${versoes} Deseja instalar agora? O programa fecha e abre de novo sozinho em alguns segundos. As coletas e o histórico continuam como estão.`, "Instalar agora", false, "Agora não"))) return;
+  const r = await api.instalar_atualizacao();
+  if (r.erro) return toast(r.erro, "erro");
+  const f = document.createElement("div");
+  f.className = "fundo-dialogo";
+  f.innerHTML = `<div class="dialogo" role="dialog" aria-modal="true"><h3>Atualizando para a versão ${esc(n.versao)}</h3>
+    <p id="texto-atualizacao">Baixando…</p><div class="barra"><i style="width:0%"></i></div></div>`;
+  document.body.append(f);
+  const vigia = setInterval(async () => {
+    const e = await api.estado_atualizacao();
+    if (e.erro) { clearInterval(vigia); f.remove(); return toast(e.erro, "erro"); }
+    const pct = e.pct ?? 0;
+    $(".barra i", f).style.width = `${pct}%`;
+    $("#texto-atualizacao", f).textContent = pct >= 100 ? "Abrindo a versão nova…" : `Baixando… ${pct}%`;
+  }, 400);
+}
+
 async function iniciar() {
   api = window.pywebview.api;
   S.prefs = await api.preferencias();
@@ -723,6 +750,7 @@ async function iniciar() {
   await atualizarColetas();
   S.carregando = false;
   ir("painel");
+  verificarAtualizacao();
   agendarEstimativa();
   setInterval(atualizarColetas, 2000);
   setInterval(vigiarTema, 5000);

@@ -4,6 +4,9 @@ O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o 
 
 ## [Não lançado]
 
+### Adicionado
+- Ao abrir, o executável verifica se há versão nova nas releases e pergunta se quer instalar agora: baixa, confere o SHA-256, troca o `ExtratorDATASUS.exe` e abre a versão nova sozinho. Não instala com coleta em andamento.
+
 ## [2.0.0] - 2026-11-10
 
 Coleta genérica: qualquer pedido montado na interface, em quatro bases do TabNet.
