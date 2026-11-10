@@ -29,16 +29,18 @@ CABECALHOS = {"Accept": "application/vnd.github+json", "User-Agent": "datasus-ex
 # %1 exe em uso, %2 exe novo, %3 e %4 processos do programa (o do PyInstaller e o do Python).
 # Espera os dois fecharem (até 2 min), troca os arquivos (volta o antigo se a troca falhar) e abre o exe.
 # Só ASCII: o cmd lê o .cmd na página de código do console; os caminhos chegam como argumentos.
+# Ferramentas pelo caminho completo: um find.exe do Git no PATH faria a espera acabar na hora.
 SCRIPT = r"""@echo off
+set W=%SystemRoot%\System32
 set N=0
 :esperar
-tasklist /FI "PID eq %~3" /NH | find "%~3" >NUL && goto ainda
-tasklist /FI "PID eq %~4" /NH | find "%~4" >NUL && goto ainda
+"%W%\tasklist.exe" /FI "PID eq %~3" /NH | "%W%\find.exe" "%~3" >NUL && goto ainda
+"%W%\tasklist.exe" /FI "PID eq %~4" /NH | "%W%\find.exe" "%~4" >NUL && goto ainda
 goto trocar
 :ainda
 set /a N+=1
 if %N% GEQ 120 goto abrir
-ping -n 2 127.0.0.1 >NUL
+"%W%\PING.EXE" -n 2 127.0.0.1 >NUL
 goto esperar
 :trocar
 move /Y "%~1" "%~1.antigo" >NUL || goto abrir
@@ -81,8 +83,11 @@ def verificar(timeout=4):
     exe = executavel()
     if not exe and os.environ.get("EXTRATOR_VERIFICAR_ATUALIZACAO") != "1":
         return None
-    if exe:  # sobra de uma troca em que o antigo ainda estava em uso
-        exe.with_name(exe.name + ".antigo").unlink(missing_ok=True)
+    try:
+        if exe:  # sobra de uma troca em que o antigo ainda estava em uso (pode continuar preso)
+            exe.with_name(exe.name + ".antigo").unlink(missing_ok=True)
+    except OSError:
+        pass
     try:
         with urllib.request.urlopen(urllib.request.Request(URL_ULTIMA, headers=CABECALHOS), timeout=timeout) as r:
             return nova_versao(json.load(r))

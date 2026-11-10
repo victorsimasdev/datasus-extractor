@@ -99,6 +99,17 @@ def test_instalar_deixa_o_exe_novo_e_inicia_o_script(monkeypatch, tmp_path):
     assert k["env"]["PYINSTALLER_RESET_ENVIRONMENT"] == "1"
     script = next(Path(tmp_path).glob("datasus-atualizacao-*.cmd")).read_text(encoding="ascii")
     assert "move /Y" in script and 'start "" "%~1"' in script
+    # sem depender do PATH: um find.exe do Git na frente faria a troca antes de o programa fechar
+    assert '"%W%\\find.exe"' in script and '"%W%\\tasklist.exe"' in script and " find " not in script
+
+
+def test_verificar_segue_com_o_antigo_preso(monkeypatch, tmp_path):
+    exe = tmp_path / atualizacao.NOME_EXE
+    monkeypatch.setattr(atualizacao, "executavel", lambda: exe)
+    monkeypatch.setattr(Path, "unlink", lambda *a, **k: (_ for _ in ()).throw(PermissionError("em uso")))
+    monkeypatch.setattr(atualizacao.urllib.request, "urlopen",
+                        lambda *a, **k: _Resposta(json.dumps(_release("v99.0.0")).encode()))
+    assert atualizacao.verificar()["versao"] == "99.0.0"
 
 
 def test_api_nao_instala_com_coleta_rodando(monkeypatch):
