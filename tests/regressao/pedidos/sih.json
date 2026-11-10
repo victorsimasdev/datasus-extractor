@@ -1,0 +1,61 @@
+{
+  "nome": "regressao SIH",
+  "base": "sih",
+  "abrangencia": "nacional",
+  "estados": [],
+  "linha": "Região",
+  "colunas": [],
+  "conteudos": [
+    "Internações",
+    "Óbitos"
+  ],
+  "exibir_linhas_zeradas": true,
+  "sem_resultado": {
+    "valor": "SR",
+    "linha_zerada": true,
+    "nenhum_registro": true,
+    "celula_traco": true,
+    "celula_nao_disponivel": true
+  },
+  "ordenar_pelos_valores": false,
+  "periodos": [
+    {
+      "tipo": "separada",
+      "nome": "Jan/2022",
+      "valores": [
+        "Jan/2022"
+      ]
+    }
+  ],
+  "filtros": {
+    "Sexo": [
+      {
+        "tipo": "separada",
+        "nome": "Masculino",
+        "valores": [
+          "1"
+        ]
+      },
+      {
+        "tipo": "separada",
+        "nome": "Feminino",
+        "valores": [
+          "2"
+        ]
+      }
+    ]
+  },
+  "combinar_filtros": "independentes",
+  "saida": {
+    "formato": "por_periodo",
+    "evidencias": "pdf",
+    "conferir_total": true,
+    "conferir_pdf": true
+  },
+  "ordem_dos_blocos": [
+    "Sexo"
+  ],
+  "titulos_dos_blocos": {
+    "Sexo": "SEXO"
+  }
+}

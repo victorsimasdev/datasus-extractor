@@ -1,0 +1,147 @@
+name: Regressão
+
+# Testes contra o site de verdade do TabNet (os testes de unidade usam páginas salvas):
+# - coleta: um pedido pequeno por base (SIH, SIM, SINASC, SIA), em períodos antigos e fechados,
+#   comparado célula a célula com o resultado conferido em tests/regressao/esperado;
+# - formulários: os 112 formulários do site comparados com as opções que o programa conhece;
+# - executável: gera o ExtratorDATASUS.exe e roda coletas com ele.
+# Roda todo dia às 4h (Brasília), à mão pela aba Actions e nos PRs que mexem na coleta ou no
+# executável. Se falhar no agendamento ou à mão, abre uma issue detalhada (ou comenta na que já
+# estiver aberta). Se o DATASUS revisar algum dado antigo de propósito:
+#   python ferramentas/regressao.py --gravar
+
+on:
+  schedule:
+    - cron: "0 7 * * *"  # todo dia, 4h em Brasília (o GitHub pode atrasar alguns minutos)
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "extrator/**"
+      - "empacotamento/**"
+      - "requirements.txt"
+      - "requirements-build.txt"
+      - "tests/regressao/**"
+      - "ferramentas/regressao.py"
+      - "ferramentas/issue_regressao.py"
+      - ".github/workflows/regressao.yml"
+
+permissions:
+  contents: read
+
+env:
+  PYTHONUTF8: "1"
+
+concurrency:
+  group: regressao-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  coleta:
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Coletar e comparar com o esperado
+        shell: bash
+        run: python ferramentas/regressao.py 2>&1 | tee relatorio-coleta.txt
+      - name: Guardar o relatório
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: relatorio-coleta
+          path: relatorio-coleta.txt
+          if-no-files-found: ignore
+
+  formularios:
+    if: github.event_name != 'pull_request'
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Conferir os 112 formulários do site
+        shell: bash
+        run: python ferramentas/verificar_formularios.py 2>&1 | tee relatorio-formularios.txt
+      - name: Guardar o relatório
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: relatorio-formularios
+          path: relatorio-formularios.txt
+          if-no-files-found: ignore
+
+  executavel:
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Gerar o executável
+        shell: bash
+        run: |
+          set -o pipefail
+          pip install -r requirements-build.txt
+          python empacotamento/gerar_exe.py --saida dist 2>&1 | tail -n 40 | tee relatorio-executavel.txt
+      - name: Coletar com o executável e comparar
+        shell: bash
+        run: python ferramentas/regressao.py --exe dist/ExtratorDATASUS.exe --so sinasc,sih 2>&1 | tee -a relatorio-executavel.txt
+      - name: Guardar o relatório
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: relatorio-executavel
+          path: relatorio-executavel.txt
+          if-no-files-found: ignore
+
+  issue:
+    needs: [coleta, formularios, executavel]
+    if: failure() && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          path: relatorios
+      - name: Montar o texto
+        id: texto
+        env:
+          RESULTADOS: ${{ toJSON(needs) }}
+          URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: python ferramentas/issue_regressao.py --resultados "$RESULTADOS" --relatorios relatorios --url "$URL" --saida corpo.md >> "$GITHUB_OUTPUT"
+      - name: Abrir a issue ou comentar na que já está aberta
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TITULO: ${{ steps.texto.outputs.titulo }}
+        run: |
+          gh label create "regressão" --color d73a4a --description "Falha no teste de regressão contra o site" --force
+          aberta=$(gh issue list --label "regressão" --state open --limit 1 --json number --jq '.[0].number')
+          if [ -n "$aberta" ]; then
+            gh issue comment "$aberta" --body-file corpo.md
+            echo "Comentado na issue #$aberta"
+          else
+            gh issue create --title "$TITULO" --label "regressão" --body-file corpo.md
+          fi

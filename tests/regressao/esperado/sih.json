@@ -1,0 +1,94 @@
+{
+ "JAN 2022": [
+  [
+   "REGIÃO",
+   "Internações",
+   "Óbitos",
+   null,
+   "INTERNAÇÕES",
+   "SEXO",
+   null
+  ],
+  [
+   null,
+   null,
+   null,
+   null,
+   null,
+   "Masculino",
+   "Feminino"
+  ],
+  [
+   "1 REGIÃO NORTE",
+   84630,
+   3248,
+   null,
+   84630,
+   31809,
+   52821
+  ],
+  [
+   "2 REGIÃO NORDESTE",
+   264420,
+   14059,
+   null,
+   264420,
+   104347,
+   160073
+  ],
+  [
+   "3 REGIÃO SUDESTE",
+   382027,
+   27125,
+   null,
+   382027,
+   165852,
+   216175
+  ],
+  [
+   "4 REGIÃO SUL",
+   165395,
+   9442,
+   null,
+   165395,
+   74060,
+   91335
+  ],
+  [
+   "5 REGIÃO CENTRO-OESTE",
+   80066,
+   3704,
+   null,
+   80066,
+   33885,
+   46181
+  ],
+  [
+   "0 IGNORADO/EXTERIOR",
+   "SR",
+   "SR",
+   null,
+   "SR",
+   "SR",
+   "SR"
+  ],
+  [
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null
+  ],
+  [
+   "TOTAL",
+   976538,
+   57578,
+   null,
+   976538,
+   409953,
+   566585
+  ]
+ ]
+}
