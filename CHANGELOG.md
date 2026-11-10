@@ -4,7 +4,7 @@ O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o 
 
 ## [Não lançado]
 
-## [2.0.0] - não lançada
+## [2.0.0] - 2026-11-10
 
 Coleta genérica: qualquer pedido montado na interface, em quatro bases do TabNet.
 
@@ -21,7 +21,7 @@ Coleta genérica: qualquer pedido montado na interface, em quatro bases do TabNe
 - Só uma janela do programa aberta por vez.
 - Executável do Windows (`ExtratorDATASUS.exe`) com `LEIA-ME.txt`, para usar sem instalar Python.
 - A coleta usa o Microsoft Edge quando o Google Chrome não está instalado.
-- Licença MIT, política de segurança e releases automáticas a cada merge na main, com o executável anexado.
+- Licença MIT, política de segurança e releases automáticas a cada merge na main (tag e release com o executável anexado).
 
 ### Alterado
 - SR passa a valer também para `-` (zero) e `...` (dado não disponível); linhas zeradas são sempre exibidas.

@@ -204,7 +204,7 @@ Cada merge na `main` passa pelo workflow `Release`, que lê os commits desde a �
 | qualquer commit que mude o `requirements.txt` | `chore(deps): bump pypdf from 6.21.4 to 7.0.0` | 2.4.3 → 2.4.4 |
 | `docs:`, `chore:`, `ci:`, `test:`, `refactor:` (inclusive `requirements-dev.txt` e actions do GitHub) | `docs: README` | sem release |
 
-Quando há release, o workflow roda os testes, grava a versão no `pyproject.toml`, no `extrator/__init__.py` e no `CHANGELOG.md` (commit `chore: versão X.Y.Z`), cria a tag e publica a release com o zip do Windows (`ExtratorDATASUS.exe`, `LEIA-ME.txt` e `LICENSE.txt`), gerado no próprio GitHub Actions. As notas vêm do que estiver em "Não lançado" no CHANGELOG; se estiver vazio, são geradas dos commits. Subir a versão à mão no `pyproject.toml` também vale, e a aba Actions permite lançar uma versão escolhida. Regras em `ferramentas/release.py`.
+Quando há release, o workflow roda os testes, cria a tag no commit do merge e publica a release com o zip do Windows (`ExtratorDATASUS.exe`, `LEIA-ME.txt` e `LICENSE.txt`), gerado no próprio GitHub Actions. Nada é gravado na `main`, que é protegida: a versão é carimbada no executável na hora de gerá-lo. Para escrever as notas de uma versão, inclua no PR uma seção `## [X.Y.Z]` no `CHANGELOG.md`; sem ela, as notas são geradas dos commits. Subir a versão à mão no `pyproject.toml` também vale, e a aba Actions permite lançar uma versão escolhida. Regras em `ferramentas/release.py`.
 
 ## Particularidades do TabNet
 
