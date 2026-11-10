@@ -1,0 +1,115 @@
+name: Release
+
+# A cada merge na main, calcula a versão pelos commits desde a última tag
+# (release:/tipo!:/BREAKING CHANGE -> X.0.0, feat -> x.Y.0, fix ou requirements.txt -> x.y.Z;
+# o resto não gera versão), cria a tag no commit do merge e publica a release com o zip do
+# Windows (ExtratorDATASUS.exe + LEIA-ME.txt + LICENSE.txt). Nada é gravado na main (protegida):
+# a versão é carimbada no executável na hora de gerá-lo, e as notas vêm da seção "## [X.Y.Z]"
+# do CHANGELOG, se existir, ou dos commits.
+# Regras completas em ferramentas/release.py; o executável em empacotamento/gerar_exe.py.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      versao:
+        description: "Versão a lançar (X.Y.Z). Deixe vazio para calcular pelos commits."
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  preparar:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      versao: ${{ steps.versao.outputs.versao }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Calcular a versão
+        id: versao
+        env:
+          FORCAR: ${{ inputs.versao }}
+        run: python ferramentas/release.py calcular --forcar "$FORCAR" >> "$GITHUB_OUTPUT"
+
+      - name: Sem release
+        if: steps.versao.outputs.versao == ''
+        run: echo "Nenhum commit feat, fix, release ou de dependência do programa desde a última tag."
+
+      - name: Testar
+        if: steps.versao.outputs.versao != ''
+        run: |
+          pip install -r requirements-dev.txt
+          ruff check .
+          pytest -q
+
+      - name: Notas e tag
+        if: steps.versao.outputs.versao != ''
+        env:
+          VERSAO: ${{ steps.versao.outputs.versao }}
+        run: |
+          python ferramentas/release.py notas "$VERSAO" --saida notas.md
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "v$VERSAO" -m "v$VERSAO"
+          git push origin "v$VERSAO"
+
+      - name: Guardar as notas
+        if: steps.versao.outputs.versao != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: notas
+          path: notas.md
+
+  publicar:
+    needs: preparar
+    if: needs.preparar.outputs.versao != ''
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    env:
+      VERSAO: ${{ needs.preparar.outputs.versao }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: v${{ needs.preparar.outputs.versao }}
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Gerar o executável
+        run: |
+          python ferramentas/release.py carimbar $env:VERSAO
+          pip install -r requirements-build.txt
+          python empacotamento/gerar_exe.py --saida dist
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: notas
+
+      - name: Publicar a release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "v$VERSAO" "dist/datasus-extractor-$VERSAO-windows.zip" \
+            --title "v$VERSAO" --notes-file notas.md --verify-tag

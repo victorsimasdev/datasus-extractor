@@ -23,10 +23,16 @@ O programa faz uma consulta por vez, com espera entre tentativas. Use com modera
 
 Em todas, a coleta pode ser no Brasil inteiro (linhas por região, estado...) ou dentro de estados escolhidos (linhas por município, região de saúde, estabelecimento...). As opções de cada campo são as reais do site, lidas dos 112 formulários (nacional e 27 estados de cada base).
 
-## Requisitos
+## Baixar (Windows, sem instalar Python)
+
+Na página da [última release](https://github.com/victorsimasdev/datasus-extractor/releases/latest), baixe `datasus-extractor-X.Y.Z-windows.zip`, extraia e abra `ExtratorDATASUS.exe`. O `LEIA-ME.txt` do zip explica o uso passo a passo.
+
+Precisa de Windows 10 ou 11, internet e Google Chrome ou Microsoft Edge (o Edge já vem no Windows). Na primeira vez, o Windows pode avisar que o programa não tem assinatura digital: "Mais informações" → "Executar assim mesmo".
+
+## Rodar pelo código
 
 - Python 3.11+
-- Google Chrome instalado (a coleta usa o Chrome do computador)
+- Google Chrome ou Microsoft Edge instalado (a coleta usa o navegador do computador; sem o Chrome, usa o Edge)
 - Windows recomendado (a prevenção de suspensão durante a coleta é do Windows)
 
 ```bash
@@ -175,6 +181,30 @@ Os testes rodam no GitHub Actions a cada push, no Windows e no Ubuntu. Os script
 ```bash
 python ferramentas/verificar_formularios.py
 ```
+
+Gerar o executável e o zip da release localmente (no Windows):
+
+```bash
+pip install -r requirements-build.txt
+```
+
+```bash
+python empacotamento/gerar_exe.py
+```
+
+### Versões e releases
+
+Cada merge na `main` passa pelo workflow `Release`, que lê os commits desde a última tag e decide a versão (versionamento semântico, uma subida por release, pela mudança mais forte):
+
+| Commit | Exemplo | Versão |
+|---|---|---|
+| `release:`, `tipo!:` ou `BREAKING CHANGE:` no corpo | `release: pedido em formato novo` | 2.4.3 → 3.0.0 |
+| `feat:` | `feat: base do SINAN` | 2.4.3 → 2.5.0 |
+| `fix:` | `fix: período errado no título` | 2.4.3 → 2.4.4 |
+| qualquer commit que mude o `requirements.txt` | `chore(deps): bump pypdf from 6.21.4 to 7.0.0` | 2.4.3 → 2.4.4 |
+| `docs:`, `chore:`, `ci:`, `test:`, `refactor:` (inclusive `requirements-dev.txt` e actions do GitHub) | `docs: README` | sem release |
+
+Quando há release, o workflow roda os testes, cria a tag no commit do merge e publica a release com o zip do Windows (`ExtratorDATASUS.exe`, `LEIA-ME.txt` e `LICENSE.txt`), gerado no próprio GitHub Actions. Nada é gravado na `main`, que é protegida: a versão é carimbada no executável na hora de gerá-lo. Para escrever as notas de uma versão, inclua no PR uma seção `## [X.Y.Z]` no `CHANGELOG.md`; sem ela, as notas são geradas dos commits. Subir a versão à mão no `pyproject.toml` também vale, e a aba Actions permite lançar uma versão escolhida. Regras em `ferramentas/release.py`.
 
 ## Particularidades do TabNet
 

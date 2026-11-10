@@ -168,9 +168,24 @@ def descrever_filtros(consulta):
 
 
 # ---------------------------------------------------------------- navegador
+NAVEGADORES = ("chrome", "msedge")  # Google Chrome, ou o Microsoft Edge que já vem no Windows
+
+
+def abrir_navegador(pw, headless=True):
+    """Abre o Chrome instalado; sem ele, o Edge. Nenhum navegador é baixado."""
+    erros = []
+    for canal in NAVEGADORES:
+        try:
+            return pw.chromium.launch(channel=canal, headless=headless)
+        except Exception as e:
+            erros.append(f"{canal}: {str(e).splitlines()[0][:120]}")
+    raise RuntimeError("Nenhum navegador encontrado. Instale o Google Chrome ou o Microsoft Edge. "
+                       + " | ".join(erros))
+
+
 class Coletor:
     def __init__(self, pw, pasta_saida, evidencias="pdf_png", headless=True):
-        self.browser = pw.chromium.launch(channel="chrome", headless=headless)
+        self.browser = abrir_navegador(pw, headless)
         self.pasta = Path(pasta_saida)
         self.evidencias = evidencias
 

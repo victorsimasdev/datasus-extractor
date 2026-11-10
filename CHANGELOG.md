@@ -4,34 +4,30 @@ O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o 
 
 ## [Não lançado]
 
-### Adicionado
-- Interface nova em HTML numa janela de desktop (pywebview): Painel com alertas e números do momento, Novo pedido em 6 passos com prévia da planilha, Minhas coletas com registro ao vivo e Configurações. A janela Tkinter continua em `python -m extrator classica`.
-- Temas claro, escuro e "seguir o Windows" (Ctrl+D alterna), com barra de título escura no Windows.
-- Ícone do programa na janela e na barra de tarefas.
-- Atalhos de teclado para navegar pelos passos e abrir as coletas.
-- Avisos curtos no rodapé da janela, no lugar de caixas de diálogo informativas.
+## [2.0.0] - 2026-11-10
 
-### Alterado
-- Barra lateral com logo, destaque do passo atual e hover; barra de progresso dos passos; cartões com hover.
-- Conteúdo dos passos com rolagem em janelas pequenas e estimativa calculada sem travar os cliques.
-- A janela abre centralizada e lembra o tamanho e o tema.
-
-## [2.0.0] - não lançada
-
-Coleta genérica: qualquer pedido montado na janela, em quatro bases do TabNet.
+Coleta genérica: qualquer pedido montado na interface, em quatro bases do TabNet.
 
 ### Adicionado
-- Pacote `extrator`, executado com `python -m extrator`: janela de pedido, plano de consultas, coleta com evidências e retomada, planilha e conferência independente pelos PDFs.
+- Pacote `extrator`, executado com `python -m extrator`: interface de pedido, plano de consultas, coleta com evidências e retomada, planilha e conferência independente pelos PDFs.
 - Bases: internações (SIH), mortalidade (SIM), nascidos vivos (SINASC) e produção ambulatorial (SIA), no Brasil inteiro ou dentro de estados.
 - Filtros e períodos com opções separadas, grupos somados pelo site e blocos de colunas na planilha.
 - Planilha em três formatos, com as abas EVIDÊNCIAS e _MAPA (origem de cada célula).
 - Validação de cada resultado no título da página (período e filtros) e registro de somas que não batem com o TOTAL do site.
 - Fila de coletas com histórico (tela "Minhas coletas" e comandos `fila` e `coletas`): uma coleta por vez, com progresso, parar, continuar e reordenar.
+- Interface em HTML numa janela de desktop (pywebview): Painel, Novo pedido em 6 passos com prévia da planilha, Minhas coletas com registro ao vivo e Configurações. A janela Tkinter continua em `python -m extrator classica`.
+- Temas claro, escuro e "seguir o Windows" (Ctrl+D alterna), com barra de título escura no Windows.
+- Ícone do programa na janela e na barra de tarefas, e atalhos de teclado para os passos e as coletas.
 - Só uma janela do programa aberta por vez.
+- Executável do Windows (`ExtratorDATASUS.exe`) com `LEIA-ME.txt`, para usar sem instalar Python.
+- A coleta usa o Microsoft Edge quando o Google Chrome não está instalado.
+- Licença MIT, política de segurança e releases automáticas a cada merge na main (tag e release com o executável anexado).
 
 ### Alterado
 - SR passa a valer também para `-` (zero) e `...` (dado não disponível); linhas zeradas são sempre exibidas.
 - A coleta usa https.
+- A janela abre centralizada e lembra o tamanho e o tema.
+- Dependências: pypdf 7.0.0 e pywebview 6.2.1.
 
 ### Removido
 - Scripts da coleta fixa (rodada 1 e por perfil), atalhos `.bat`, envio ao Drive, migração entre computadores e janela de progresso antiga: o pacote faz o mesmo de forma genérica.

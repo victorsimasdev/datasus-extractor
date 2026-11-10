@@ -90,3 +90,29 @@ def test_soma_diferente_do_total_e_registrada():
     t["linhas"][1][1] = "170"  # Norte Masc: 169 -> 170
     problemas = conferir_somas(consulta(), t)
     assert len(problemas) == 2  # coluna Masc e linha Norte
+
+
+class _Chromium:
+    def __init__(self, instalados):
+        self.instalados, self.tentados = instalados, []
+
+    def launch(self, channel, headless):
+        self.tentados.append(channel)
+        if channel not in self.instalados:
+            raise RuntimeError(f"Chromium distribution '{channel}' is not found\nmais detalhes")
+        return f"navegador {channel}"
+
+
+class _Pw:
+    def __init__(self, instalados):
+        self.chromium = _Chromium(instalados)
+
+
+def test_navegador_usa_o_chrome_e_cai_para_o_edge():
+    from extrator.tabnet import abrir_navegador
+
+    assert abrir_navegador(_Pw({"chrome", "msedge"})) == "navegador chrome"
+    pw = _Pw({"msedge"})
+    assert abrir_navegador(pw) == "navegador msedge" and pw.chromium.tentados == ["chrome", "msedge"]
+    with pytest.raises(RuntimeError, match="Instale o Google Chrome ou o Microsoft Edge"):
+        abrir_navegador(_Pw(set()))

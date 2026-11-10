@@ -1,0 +1,8 @@
+# Fora do "Source code" que o GitHub anexa às releases: só interessa a quem desenvolve.
+.github/             export-ignore
+tests/               export-ignore
+empacotamento/       export-ignore
+.gitattributes       export-ignore
+requirements-dev.txt export-ignore
+requirements-build.txt export-ignore
+ferramentas/release.py export-ignore

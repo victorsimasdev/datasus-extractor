@@ -1,0 +1,87 @@
+EXTRATOR DATASUS {versao}
+=========================
+
+Monta planilhas com dados do TabNet/DATASUS: internações (SIH), mortalidade (SIM),
+nascidos vivos (SINASC) e produção ambulatorial (SIA), no Brasil inteiro ou por estado.
+Cada número da planilha vem com a prova de onde saiu (PDF e imagem da consulta no site).
+
+Projeto independente, sem vínculo com o DATASUS nem com o Ministério da Saúde.
+Site do projeto: https://github.com/victorsimasdev/datasus-extractor
+
+
+O QUE PRECISA
+-------------
+- Windows 10 ou 11.
+- Internet.
+- Google Chrome ou Microsoft Edge (o Edge já vem no Windows). A coleta usa o navegador
+  do computador, sem abrir janela.
+- Não precisa instalar Python nem nada mais.
+
+
+COMO ABRIR
+----------
+1. Extraia o zip numa pasta (por exemplo, Documentos\Extrator DATASUS).
+   Não rode o programa de dentro do zip.
+2. Dê dois cliques em ExtratorDATASUS.exe.
+3. Na primeira vez, o Windows pode mostrar "O Windows protegeu o computador", porque o
+   programa não tem assinatura digital paga. Clique em "Mais informações" e depois em
+   "Executar assim mesmo". O código-fonte é aberto e está no site do projeto.
+
+A primeira abertura leva alguns segundos a mais. Só uma janela do programa abre por vez.
+
+
+COMO USAR
+---------
+Clique em "Novo pedido" e siga os seis passos:
+
+1. Base de dados: escolha a base e se é o Brasil inteiro ou alguns estados.
+2. Tabela: o que contar (internações, óbitos, valores...), o que vai em cada linha
+   (região, estado, município...) e, se quiser, uma quebra em colunas.
+3. Período: os meses ou anos. Cada um pode sair separado ou somado num grupo.
+4. Filtros: marque as opções de cada campo (sexo, faixa etária, cor/raça...).
+   Cada opção pode virar uma coluna separada ou entrar somada num grupo com nome.
+5. Saída: a pasta onde a planilha vai ficar e o formato dela.
+6. Revisar: confira a prévia da planilha e clique em "Gerar pedido".
+
+O pedido entra na fila e a coleta começa sozinha. Acompanhe em "Minhas coletas":
+progresso, tempo restante, parar e continuar depois de onde parou. Uma coleta roda por
+vez; as outras esperam na fila. Pode fechar a janela: a coleta continua.
+
+Atalhos: Ctrl+N novo pedido, Ctrl+Enter gerar, Ctrl+D tema claro/escuro.
+
+
+O QUE SAI NA PASTA DO PEDIDO
+----------------------------
+- <nome do pedido>.xlsx  a planilha. A aba EVIDÊNCIAS tem o link do PDF e da imagem de
+                         cada consulta.
+- evidencias\            PDF e imagem de cada consulta, uma pasta por período.
+- RELATÓRIO.txt          resumo da coleta e da conferência.
+
+SR (sem resultado) aparece quando o site não tem o dado: linha zerada, "Nenhum registro
+selecionado", "-" (zero) ou "..." (não disponível). Nenhum número é calculado pelo
+programa: tudo é o que o próprio site mostrou, e no fim cada célula é conferida de novo
+com os PDFs.
+
+
+DICAS
+-----
+- Pedidos grandes geram muitas consultas (a estimativa aparece antes de gerar). O site do
+  DATASUS é público e às vezes fica lento: o programa espera e tenta de novo sozinho.
+  Use com moderação.
+- Os dados dos últimos seis meses ainda podem ser atualizados pelo DATASUS.
+- Se o DATASUS mudar as opções do site, use Configurações > "Atualizar opções".
+- Histórico, preferências e registro de erros ficam em
+  C:\Users\<seu usuário>\.datasus-extractor
+
+
+PROBLEMAS
+---------
+- "Nenhum navegador encontrado": instale o Google Chrome ou atualize o Microsoft Edge.
+- A janela abre em branco: instale o "Microsoft Edge WebView2 Runtime" (site da Microsoft).
+  No Windows 11 ele já vem instalado.
+- Outros problemas ou sugestões: abra uma issue no site do projeto.
+
+
+LICENÇA
+-------
+MIT: pode usar, copiar e modificar à vontade, sem garantia. Texto completo em LICENSE.txt.
