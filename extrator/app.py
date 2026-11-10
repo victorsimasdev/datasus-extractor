@@ -20,6 +20,7 @@ from .comum import gravar_json
 WEB = Path(__file__).resolve().parent / "web"
 ICONE_ICO = Path(__file__).resolve().parent / "recursos" / "icone.ico"
 SEGUNDOS_POR_CONSULTA = 20
+FUNDOS = {"escuro": "#0e1116", "claro": "#f5f6f8", "rosa": "#fdf2f6"}  # cor da janela antes da página carregar
 
 
 def _bases():
@@ -270,6 +271,7 @@ def abrir():
             api = Api()
             prefs = api.preferencias()
             escuro = tema.resolver(prefs["tema"]) == "escuro"
+            fundo = FUNDOS.get(prefs["tema"]) or FUNDOS["escuro" if escuro else "claro"]
             tamanho = prefs.get("tamanho", "1440x920")
             try:
                 largura, altura = (int(x) for x in tamanho.split("x"))
@@ -277,7 +279,7 @@ def abrir():
                 largura, altura = 1440, 920
             janela = webview.create_window(
                 "Extrator DATASUS", url=str(WEB / "index.html"), js_api=api, width=largura, height=altura,
-                min_size=(1100, 700), background_color="#0e1116" if escuro else "#f5f6f8", text_select=False)
+                min_size=(1100, 700), background_color=fundo, text_select=False)
             api._janela = janela
 
             def ao_mostrar():

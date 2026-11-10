@@ -1,4 +1,4 @@
-/* Extrator DATASUS — painel escuro por padrão, tema claro equivalente.
+/* Extrator DATASUS — painel escuro por padrão, temas claro e rosa equivalentes.
    Layout: barra lateral fixa + barra superior + conteúdo em grade; trilho de resumo no assistente. */
 :root {
   --bg: #0e1116; --panel: #151a21; --raise: #1b212a; --sunken: #11151b;
@@ -26,6 +26,18 @@
   --bad: #c2362d; --bad-soft: rgba(194, 54, 45, .09);
   --sr: #8a93a0;
   --shadow: 0 10px 30px rgba(16, 24, 40, .12);
+  color-scheme: light;
+}
+:root[data-theme="pink"] {
+  --bg: #fdf2f6; --panel: #ffffff; --raise: #fbe7ef; --sunken: #f9e4ec;
+  --line: rgba(131, 24, 67, .10); --line-strong: rgba(131, 24, 67, .18);
+  --fg: #3b0a1f; --muted: #8a4a66; --faint: #b98aa0;
+  --accent: #d6336c; --accent-fg: #ffffff; --accent-soft: rgba(214, 51, 108, .11);
+  --ok: #1d8a4b; --ok-soft: rgba(29, 138, 75, .1);
+  --warn: #a8670a; --warn-soft: rgba(196, 128, 18, .12);
+  --bad: #b42318; --bad-soft: rgba(180, 35, 24, .09);
+  --sr: #b98aa0;
+  --shadow: 0 10px 30px rgba(131, 24, 67, .12);
   color-scheme: light;
 }
 
@@ -77,7 +89,7 @@ button, input, select { font: inherit; color: inherit; }
 .ponto.ok { background: var(--ok); box-shadow: 0 0 0 3px var(--ok-soft); }
 .ponto.vivo { background: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); animation: pulso 1.6s infinite; }
 @keyframes pulso { 50% { box-shadow: 0 0 0 6px transparent; } }
-.temas { display: grid; grid-template-columns: repeat(3, 1fr); background: var(--sunken); border-radius: var(--r-sm); padding: 3px; gap: 2px; }
+.temas { display: grid; grid-template-columns: repeat(4, 1fr); background: var(--sunken); border-radius: var(--r-sm); padding: 3px; gap: 2px; }
 .temas button { border: 0; background: none; padding: 5px 0; border-radius: 5px; font-size: 12px; color: var(--muted); cursor: pointer; }
 .temas button.ativo { background: var(--panel); color: var(--fg); box-shadow: 0 1px 2px rgba(0,0,0,.2); }
 
