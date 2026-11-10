@@ -1,5 +1,4 @@
 import sys
-from datetime import date
 from pathlib import Path
 
 import pytest
@@ -63,31 +62,28 @@ Texto de abertura.
 """
 
 
-def test_changelog_gerado_dos_commits():
-    texto, notas = release.atualizar_changelog(CHANGELOG, "2.1.0", [("feat: nova base", ""), ("ci: x", "")],
-                                               date(2026, 12, 1))
+def test_notas_da_secao_escrita_no_changelog():
+    notas = release.notas_da_versao(CHANGELOG, "2.0.0", [("feat: outra coisa", "")])
+    assert notas == "### Adicionado\n- Algo"
+
+
+def test_notas_dos_commits_sem_secao_da_versao():
+    notas = release.notas_da_versao(CHANGELOG, "2.1.0", [("feat: nova base", ""), ("ci: x", "")])
     assert notas == "### Adicionado\n- Nova base"
-    assert texto.index("## [Não lançado]") < texto.index("## [2.1.0] - 2026-12-01") < texto.index("## [2.0.0]")
-    assert texto.count("## [Não lançado]") == 1
-    assert texto.startswith("# Changelog\n\nTexto de abertura.\n\n## [Não lançado]\n\n## [2.1.0]")
+    vazia = CHANGELOG.replace("## [2.0.0] - 2026-11-10\n\n### Adicionado\n- Algo\n", "## [2.0.0]\n")
+    assert release.notas_da_versao(vazia, "2.0.0", [("fix: erro", "")]) == "### Corrigido\n- Erro"
 
 
-def test_changelog_usa_o_que_foi_escrito_a_mao():
-    base = CHANGELOG.replace("## [Não lançado]\n", "## [Não lançado]\n\n### Alterado\n- Escrito à mão\n")
-    texto, notas = release.atualizar_changelog(base, "2.1.0", [("feat: outra coisa", "")], date(2026, 12, 1))
-    assert notas == "### Alterado\n- Escrito à mão"
-    assert "outra coisa" not in texto
-    assert texto.index("## [Não lançado]\n\n## [2.1.0] - 2026-12-01\n\n### Alterado\n- Escrito à mão") > 0
-
-
-def test_changelog_junta_secao_pronta_e_nao_lancado():
-    base = ("# Changelog\n\n## [Não lançado]\n\n### Adicionado\n- Interface nova\n\n"
-            "## [2.0.0] - não lançada\n\nColeta genérica.\n\n## [1.0.0] - 2026-01-01\n")
-    texto, notas = release.atualizar_changelog(base, "2.0.0", [], date(2026, 11, 10))
-    assert notas == "### Adicionado\n- Interface nova\n\nColeta genérica."
-    assert "não lançada" not in texto
-    assert texto.count("## [2.0.0]") == 1
-    assert "## [2.0.0] - 2026-11-10" in texto and texto.index("## [2.0.0]") < texto.index("## [1.0.0]")
+def test_carimbar_versao(tmp_path, monkeypatch):
+    (tmp_path / "pyproject.toml").write_text('[project]\nversion = "2.0.0"\n', encoding="utf-8")
+    (tmp_path / "__init__.py").write_text('__version__ = "2.0.0"\n', encoding="utf-8")
+    monkeypatch.setattr(release, "PYPROJECT", tmp_path / "pyproject.toml")
+    monkeypatch.setattr(release, "INIT", tmp_path / "__init__.py")
+    release.main(["carimbar", "2.1.3"])
+    assert 'version = "2.1.3"' in (tmp_path / "pyproject.toml").read_text(encoding="utf-8")
+    assert (tmp_path / "__init__.py").read_text(encoding="utf-8") == '__version__ = "2.1.3"\n'
+    with pytest.raises(SystemExit):
+        release.main(["carimbar", "2.1"])
 
 
 def test_versao_forcada_invalida():

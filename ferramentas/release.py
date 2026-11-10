@@ -12,22 +12,25 @@ Regras (versionamento semântico, uma subida por release, pela mudança mais for
 
 Se a versão do pyproject.toml já estiver à frente da última tag (subida à mão), vale a maior das duas.
 
+A main é protegida e nada é gravado nela: a release é só a tag no commit do merge, e a versão é
+carimbada no executável na hora de gerá-lo. As notas vêm da seção "## [X.Y.Z]" do CHANGELOG, se
+existir; senão, dos commits.
+
 Uso:
   python ferramentas/release.py calcular [--forcar X.Y.Z]   imprime "versao=X.Y.Z" (vazio se não há release)
-  python ferramentas/release.py aplicar X.Y.Z               grava a versão nos arquivos e as notas em notas.md
+  python ferramentas/release.py notas X.Y.Z [--saida F]     grava as notas da release (padrão: notas.md)
+  python ferramentas/release.py carimbar X.Y.Z              grava a versão no pyproject.toml e no __init__.py
 """
 import argparse
 import re
 import subprocess
 import sys
-from datetime import date
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
 PYPROJECT = RAIZ / "pyproject.toml"
 INIT = RAIZ / "extrator" / "__init__.py"
 CHANGELOG = RAIZ / "CHANGELOG.md"
-NAO_LANCADO = "## [Não lançado]"
 
 PESO = {None: 0, "dependencias": 1, "correcao": 1, "menor": 2, "maior": 3}
 DEPENDENCIAS_DO_PROGRAMA = "requirements.txt"
@@ -133,28 +136,15 @@ def secao(texto, titulo_inicio):
     return m.start(), (m.end() + prox.start()) if prox else len(texto)
 
 
-def atualizar_changelog(texto, versao, commits, hoje):
-    """Devolve (changelog novo, notas da release).
-
-    Ordem de preferência das notas: seção já escrita para a versão ("## [X.Y.Z]"), depois o que
-    estiver em "Não lançado" (os dois juntos se houver), e por fim as notas geradas dos commits.
-    """
-    titulo = f"## [{versao}] - {hoje:%Y-%m-%d}"
-    partes = []
-    for inicio in (f"## [{versao}]", NAO_LANCADO):
-        pos = secao(texto, inicio)
-        if pos:
-            corpo = texto[pos[0]:pos[1]].split("\n", 1)[1].strip() if "\n" in texto[pos[0]:pos[1]] else ""
-            partes.append((pos, corpo))
-    # tira as seções antigas (de trás para frente para não deslocar posições)
-    for (ini, fim), _ in sorted(partes, key=lambda p: p[0][0], reverse=True):
-        texto = texto[:ini] + texto[fim:]
-    manual = [corpo for _, corpo in sorted(partes, key=lambda p: p[0][0]) if corpo]
-    notas = "\n\n".join(manual) if manual else notas_dos_commits(commits)
-    nova = f"{NAO_LANCADO}\n\n{titulo}\n\n{notas}\n\n"
-    pos = re.search(r"^## ", texto, re.M)
-    texto = texto[:pos.start()] + nova + texto[pos.start():] if pos else texto.rstrip("\n") + "\n\n" + nova
-    return texto.rstrip("\n") + "\n", notas
+def notas_da_versao(texto, versao, commits):
+    """Notas da release: a seção "## [X.Y.Z]" do CHANGELOG, se alguém a escreveu; senão, as dos commits."""
+    pos = secao(texto, f"## [{versao}]")
+    if pos:
+        bloco = texto[pos[0]:pos[1]]
+        corpo = bloco.split("\n", 1)[1].strip() if "\n" in bloco else ""
+        if corpo:
+            return corpo
+    return notas_dos_commits(commits)
 
 
 def gravar_versao(versao):
@@ -192,15 +182,10 @@ def calcular(forcar=""):
     return escolher(atual, proxima(atual, nivel_da_release(commits_desde(tag))), versao_no_codigo())
 
 
-def aplicar(versao, saida_notas):
-    tag = ultima_tag()
-    if tag == f"v{versao}" or _git("tag", "--list", f"v{versao}").strip():
-        sys.exit(f"A tag v{versao} já existe.")
-    gravar_versao(versao)
-    texto, notas = atualizar_changelog(CHANGELOG.read_text(encoding="utf-8"), versao, commits_desde(tag),
-                                       date.today())
-    CHANGELOG.write_text(texto, encoding="utf-8")
-    Path(saida_notas).write_text(notas + "\n", encoding="utf-8")
+def gerar_notas(versao, saida):
+    texto = CHANGELOG.read_text(encoding="utf-8") if CHANGELOG.is_file() else ""
+    notas = notas_da_versao(texto, versao, commits_desde(ultima_tag()))
+    Path(saida).write_text((notas or "Sem notas.") + "\n", encoding="utf-8")
 
 
 def main(argv=None):
@@ -208,14 +193,20 @@ def main(argv=None):
     sub = p.add_subparsers(dest="comando", required=True)
     c = sub.add_parser("calcular")
     c.add_argument("--forcar", default="")
-    a = sub.add_parser("aplicar")
-    a.add_argument("versao")
-    a.add_argument("--notas", default="notas.md")
+    n = sub.add_parser("notas")
+    n.add_argument("versao")
+    n.add_argument("--saida", default="notas.md")
+    v = sub.add_parser("carimbar")
+    v.add_argument("versao")
     args = p.parse_args(argv)
     if args.comando == "calcular":
         print(f"versao={calcular(args.forcar.strip())}")
+    elif args.comando == "notas":
+        gerar_notas(args.versao, args.saida)
     else:
-        aplicar(args.versao, args.notas)
+        if not RE_VERSAO.match(args.versao):
+            sys.exit(f"Versão inválida: {args.versao!r} (use X.Y.Z)")
+        gravar_versao(args.versao)
 
 
 if __name__ == "__main__":

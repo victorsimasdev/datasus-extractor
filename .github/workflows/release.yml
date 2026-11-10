@@ -2,8 +2,10 @@ name: Release
 
 # A cada merge na main, calcula a versão pelos commits desde a última tag
 # (release:/tipo!:/BREAKING CHANGE -> X.0.0, feat -> x.Y.0, fix ou requirements.txt -> x.y.Z;
-# o resto não gera versão), grava a versão e o CHANGELOG, cria a tag e publica a release com
-# o zip do Windows (ExtratorDATASUS.exe + LEIA-ME.txt + LICENSE.txt).
+# o resto não gera versão), cria a tag no commit do merge e publica a release com o zip do
+# Windows (ExtratorDATASUS.exe + LEIA-ME.txt + LICENSE.txt). Nada é gravado na main (protegida):
+# a versão é carimbada no executável na hora de gerá-lo, e as notas vêm da seção "## [X.Y.Z]"
+# do CHANGELOG, se existir, ou dos commits.
 # Regras completas em ferramentas/release.py; o executável em empacotamento/gerar_exe.py.
 
 on:
@@ -58,20 +60,14 @@ jobs:
           ruff check .
           pytest -q
 
-      - name: Gravar versão e CHANGELOG, criar a tag
+      - name: Notas e tag
         if: steps.versao.outputs.versao != ''
         env:
           VERSAO: ${{ steps.versao.outputs.versao }}
         run: |
-          python ferramentas/release.py aplicar "$VERSAO" --notas notas.md
+          python ferramentas/release.py notas "$VERSAO" --saida notas.md
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add pyproject.toml extrator/__init__.py CHANGELOG.md
-          if ! git diff --cached --quiet; then
-            git commit -m "chore: versão $VERSAO"
-            git pull --rebase origin main
-            git push origin HEAD:main
-          fi
           git tag -a "v$VERSAO" -m "v$VERSAO"
           git push origin "v$VERSAO"
 
@@ -102,6 +98,7 @@ jobs:
 
       - name: Gerar o executável
         run: |
+          python ferramentas/release.py carimbar $env:VERSAO
           pip install -r requirements-build.txt
           python empacotamento/gerar_exe.py --saida dist
 
