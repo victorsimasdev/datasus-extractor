@@ -13,12 +13,16 @@ Regras (versionamento semântico, uma subida por release, pela mudança mais for
 Se a versão do pyproject.toml já estiver à frente da última tag (subida à mão), vale a maior das duas.
 
 A main é protegida e nada é gravado nela: a release é só a tag no commit do merge, e a versão é
-carimbada no executável na hora de gerá-lo. As notas vêm da seção "## [X.Y.Z]" do CHANGELOG, se
-existir; senão, dos commits.
+carimbada no executável na hora de gerá-lo.
+
+A página da release é o modelo fixo .github/modelo-release.md (descrição e como instalar) com a seção
+"O que mudou": todos os commits desde a tag anterior, agrupados pelo tipo (Adicionado, Corrigido,
+Dependências, Documentação...).
 
 Uso:
   python ferramentas/release.py calcular [--forcar X.Y.Z]   imprime "versao=X.Y.Z" (vazio se não há release)
-  python ferramentas/release.py notas X.Y.Z [--saida F]     grava as notas da release (padrão: notas.md)
+  python ferramentas/release.py notas X.Y.Z [--saida F] [--anterior vA.B.C] [--ate vX.Y.Z]
+                                                            grava a página da release (padrão: notas.md)
   python ferramentas/release.py carimbar X.Y.Z              grava a versão no pyproject.toml e no __init__.py
 """
 import argparse
@@ -30,7 +34,6 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parent.parent
 PYPROJECT = RAIZ / "pyproject.toml"
 INIT = RAIZ / "extrator" / "__init__.py"
-CHANGELOG = RAIZ / "CHANGELOG.md"
 
 PESO = {None: 0, "dependencias": 1, "correcao": 1, "menor": 2, "maior": 3}
 DEPENDENCIAS_DO_PROGRAMA = "requirements.txt"
@@ -38,7 +41,12 @@ RE_ASSUNTO = re.compile(r"^(?P<tipo>[a-z]+)(?:\([^)]*\))?(?P<quebra>!)?:\s*(?P<t
 RE_BUMP = re.compile(r"^bump (?P<pacote>\S+) from (?P<de>\S+) to (?P<para>\S+)", re.I)
 RE_VERSAO = re.compile(r"^\d+\.\d+\.\d+$")
 SECOES = (("maior", "Mudanças incompatíveis"), ("menor", "Adicionado"), ("correcao", "Corrigido"),
-          ("dependencias", "Dependências"))
+          ("dependencias", "Dependências"), ("interno", "Melhorias internas"), ("docs", "Documentação"),
+          ("automacao", "Testes e automação"), ("manutencao", "Manutenção"), ("outros", "Outros"))
+TIPOS_SEM_VERSAO = {"refactor": "interno", "perf": "interno", "style": "interno", "docs": "docs",
+                    "test": "automacao", "ci": "automacao", "build": "automacao", "chore": "manutencao"}
+MODELO = RAIZ / ".github" / "modelo-release.md"
+REPO = "victorsimasdev/datasus-extractor"
 
 
 def classificar(assunto, corpo="", arquivos=()):
@@ -89,14 +97,23 @@ def nivel_da_release(commits):
     return max(niveis, key=PESO.get, default=None)
 
 
+def categoria(assunto, corpo="", arquivos=()):
+    """Seção do commit em "O que mudou": a do nível de versão, ou a do tipo (docs, ci, chore...)."""
+    nivel = classificar(assunto, corpo, arquivos)
+    if nivel:
+        return nivel
+    m = RE_ASSUNTO.match(assunto.strip())
+    return TIPOS_SEM_VERSAO.get(m["tipo"], "outros") if m else "outros"
+
+
 def notas_dos_commits(commits):
-    """Notas em Markdown, agrupadas como no CHANGELOG. Só entram commits que sobem a versão."""
+    """"O que mudou" em Markdown: todos os commits, agrupados pelo tipo (Adicionado, Corrigido...)."""
     grupos = {n: [] for n, _ in SECOES}
     for commit in commits:
         assunto, corpo, arquivos = _desempacotar(commit)
-        nivel = classificar(assunto, corpo, arquivos)
-        if nivel:
-            grupos[nivel].append(_texto(assunto))
+        if assunto.startswith("Merge "):
+            continue
+        grupos[categoria(assunto, corpo, arquivos)].append(_texto(assunto))
     blocos = [f"### {titulo}\n" + "\n".join(f"- {t}" for t in grupos[n]) for n, titulo in SECOES if grupos[n]]
     return "\n\n".join(blocos)
 
@@ -114,8 +131,8 @@ def ultima_tag():
         return None
 
 
-def commits_desde(tag):
-    faixa = f"{tag}..HEAD" if tag else "HEAD"
+def commits_desde(tag, ate="HEAD"):
+    faixa = f"{tag}..{ate}" if tag else ate
     saida = _git("log", faixa, "--no-merges", "--name-only", "--format=%x1e%s%x1f%b%x1f")
     commits = []
     for bloco in saida.split("\x1e"):
@@ -127,24 +144,13 @@ def commits_desde(tag):
 
 
 # ---------------------------------------------------------------- arquivos
-def secao(texto, titulo_inicio):
-    """(início, fim) da seção do CHANGELOG cujo título começa com titulo_inicio; None se não existe."""
-    m = re.search(rf"^{re.escape(titulo_inicio)}.*$", texto, re.M)
-    if not m:
-        return None
-    prox = re.search(r"^## ", texto[m.end():], re.M)
-    return m.start(), (m.end() + prox.start()) if prox else len(texto)
-
-
-def notas_da_versao(texto, versao, commits):
-    """Notas da release: a seção "## [X.Y.Z]" do CHANGELOG, se alguém a escreveu; senão, as dos commits."""
-    pos = secao(texto, f"## [{versao}]")
-    if pos:
-        bloco = texto[pos[0]:pos[1]]
-        corpo = bloco.split("\n", 1)[1].strip() if "\n" in bloco else ""
-        if corpo:
-            return corpo
-    return notas_dos_commits(commits)
+def pagina_da_release(versao, notas, anterior, modelo, repo=REPO):
+    """Texto da página da release: o modelo fixo com "O que mudou" e o link de comparação."""
+    comparar = (f"**Todas as mudanças:** [{anterior}...v{versao}](https://github.com/{repo}/compare/"
+                f"{anterior}...v{versao})" if anterior else "")
+    texto = (modelo.replace("{versao}", versao).replace("{repo}", repo)
+             .replace("{notas}", notas or "Sem mudanças registradas.").replace("{comparar}", comparar))
+    return texto.rstrip() + "\n"
 
 
 def gravar_versao(versao):
@@ -182,10 +188,12 @@ def calcular(forcar=""):
     return escolher(atual, proxima(atual, nivel_da_release(commits_desde(tag))), versao_no_codigo())
 
 
-def gerar_notas(versao, saida):
-    texto = CHANGELOG.read_text(encoding="utf-8") if CHANGELOG.is_file() else ""
-    notas = notas_da_versao(texto, versao, commits_desde(ultima_tag()))
-    Path(saida).write_text((notas or "Sem notas.") + "\n", encoding="utf-8")
+def gerar_notas(versao, saida, anterior=None, ate="HEAD"):
+    """Página da release com as mudanças desde a tag anterior (padrão: a última tag antes desta)."""
+    anterior = anterior or ultima_tag()
+    notas = notas_dos_commits(commits_desde(anterior, ate))
+    pagina = pagina_da_release(versao, notas, anterior, MODELO.read_text(encoding="utf-8"))
+    Path(saida).write_text(pagina, encoding="utf-8")
 
 
 def main(argv=None):
@@ -196,13 +204,15 @@ def main(argv=None):
     n = sub.add_parser("notas")
     n.add_argument("versao")
     n.add_argument("--saida", default="notas.md")
+    n.add_argument("--anterior", help="tag anterior (padrão: a última tag)")
+    n.add_argument("--ate", default="HEAD", help="até qual commit ou tag (padrão: HEAD)")
     v = sub.add_parser("carimbar")
     v.add_argument("versao")
     args = p.parse_args(argv)
     if args.comando == "calcular":
         print(f"versao={calcular(args.forcar.strip())}")
     elif args.comando == "notas":
-        gerar_notas(args.versao, args.saida)
+        gerar_notas(args.versao, args.saida, args.anterior, args.ate)
     else:
         if not RE_VERSAO.match(args.versao):
             sys.exit(f"Versão inválida: {args.versao!r} (use X.Y.Z)")

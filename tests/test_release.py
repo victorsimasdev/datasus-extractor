@@ -40,38 +40,35 @@ def test_release_sobe_uma_vez_pela_mudanca_mais_forte():
     assert release.nivel_da_release([]) is None
 
 
-def test_notas_agrupadas_so_com_o_que_sobe_versao():
+def test_o_que_mudou_agrupa_todos_os_commits_pelo_tipo():
     notas = release.notas_dos_commits([
-        ("feat: coleta do SIA", ""), ("fix(tabnet): https", ""), ("docs: README", ""), ("release: versão 3", "")])
+        ("feat: coleta do SIA", ""), ("fix(tabnet): https", ""), ("docs: README", ""), ("release: versão 3", ""),
+        ("test: casos novos", ""), ("ci: workflow", ""), ("refactor: fila", ""), ("chore: limpeza", ""),
+        ("ajusta coisa", ""), ("Merge pull request #9 from x/y", "")])
     assert notas == ("### Mudanças incompatíveis\n- Versão 3\n\n### Adicionado\n- Coleta do SIA\n\n"
-                     "### Corrigido\n- Https")
+                     "### Corrigido\n- Https\n\n### Melhorias internas\n- Fila\n\n### Documentação\n- README\n\n"
+                     "### Testes e automação\n- Casos novos\n- Workflow\n\n### Manutenção\n- Limpeza\n\n"
+                     "### Outros\n- Ajusta coisa")
 
 
-CHANGELOG = """# Changelog
-
-Texto de abertura.
-
-## [Não lançado]
-
-## [2.0.0] - 2026-11-10
-
-### Adicionado
-- Algo
-
-## [1.0.0] - 2026-01-01
-"""
+MODELO = "Descrição fixa da {versao}.\n\n[issue](https://github.com/{repo}/issues/new)\n\n## O que mudou\n\n{notas}\n\n{comparar}\n"
 
 
-def test_notas_da_secao_escrita_no_changelog():
-    notas = release.notas_da_versao(CHANGELOG, "2.0.0", [("feat: outra coisa", "")])
-    assert notas == "### Adicionado\n- Algo"
+def test_pagina_da_release_com_modelo_e_comparacao():
+    pagina = release.pagina_da_release("2.1.0", "### Adicionado\n- Tema rosa", "v2.0.0", MODELO, "dono/repo")
+    assert pagina == ("Descrição fixa da 2.1.0.\n\n[issue](https://github.com/dono/repo/issues/new)\n\n"
+                      "## O que mudou\n\n### Adicionado\n- Tema rosa\n\n"
+                      "**Todas as mudanças:** [v2.0.0...v2.1.0](https://github.com/dono/repo/compare/v2.0.0...v2.1.0)\n")
 
 
-def test_notas_dos_commits_sem_secao_da_versao():
-    notas = release.notas_da_versao(CHANGELOG, "2.1.0", [("feat: nova base", ""), ("ci: x", "")])
-    assert notas == "### Adicionado\n- Nova base"
-    vazia = CHANGELOG.replace("## [2.0.0] - 2026-11-10\n\n### Adicionado\n- Algo\n", "## [2.0.0]\n")
-    assert release.notas_da_versao(vazia, "2.0.0", [("fix: erro", "")]) == "### Corrigido\n- Erro"
+def test_pagina_da_primeira_release_sem_comparacao():
+    pagina = release.pagina_da_release("1.0.0", "", None, MODELO, "dono/repo")
+    assert "Sem mudanças registradas." in pagina and "Todas as mudanças" not in pagina
+
+
+def test_modelo_do_repositorio_tem_os_campos():
+    modelo = release.MODELO.read_text(encoding="utf-8")
+    assert all(c in modelo for c in ("{versao}", "{notas}", "{comparar}", "{repo}", "## O que mudou"))
 
 
 def test_carimbar_versao(tmp_path, monkeypatch):
@@ -119,7 +116,8 @@ def test_release_so_com_dependencias():
     commits = [("chore: bump pypdf from 6.21.4 to 7.0.0", "", ("requirements.txt",)),
                ("ci: bump actions/checkout from 4 to 7", "", (".github/workflows/testes.yml",))]
     assert release.proxima("2.0.0", release.nivel_da_release(commits)) == "2.0.1"
-    assert release.notas_dos_commits(commits) == "### Dependências\n- pypdf 6.21.4 → 7.0.0"
+    assert release.notas_dos_commits(commits) == ("### Dependências\n- pypdf 6.21.4 → 7.0.0\n\n"
+                                                  "### Testes e automação\n- actions/checkout 4 → 7")
 
 
 def test_notas_com_correcao_e_dependencia():
