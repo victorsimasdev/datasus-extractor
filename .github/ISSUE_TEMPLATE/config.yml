@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Como usar o programa
+    url: https://github.com/victorsimasdev/datasus-extractor#readme
+    about: Passo a passo do pedido, regras da planilha (SR) e o que sai na pasta. O mesmo texto está no LEIA-ME.txt do zip.
+  - name: Baixar a versão mais recente
+    url: https://github.com/victorsimasdev/datasus-extractor/releases/latest
+    about: Antes de relatar um erro, veja se ele já foi corrigido na última versão.
+  - name: Falha de segurança
+    url: https://github.com/victorsimasdev/datasus-extractor/security/advisories/new
+    about: Relate vulnerabilidades de forma privada, sem abrir uma issue pública.

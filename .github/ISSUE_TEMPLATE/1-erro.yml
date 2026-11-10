@@ -1,0 +1,103 @@
+name: Erro no programa
+description: O programa travou, mostrou um erro, a coleta não terminou ou algo não funciona como devia.
+title: "[Erro] "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Obrigado por avisar! Quanto mais detalhes, mais rápido dá para corrigir.
+        **Não cole dados pessoais** (nome de usuário do Windows nos caminhos pode ser trocado por `<usuário>`).
+  - type: textarea
+    id: o-que-aconteceu
+    attributes:
+      label: O que aconteceu
+      description: Descreva o problema e, se apareceu, a mensagem de erro exata.
+      placeholder: Ao gerar o pedido, a coleta parou na consulta 3 de 12 com "tentativas esgotadas".
+    validations:
+      required: true
+  - type: textarea
+    id: passos
+    attributes:
+      label: Como reproduzir
+      description: Os passos até o erro aparecer.
+      placeholder: |
+        1. Novo pedido → base Internações (SIH), Brasil inteiro
+        2. Período Jan/2024, filtro Sexo com Masculino e Feminino separados
+        3. Gerar pedido
+        4. Em Minhas coletas, a coleta para com erro
+    validations:
+      required: true
+  - type: textarea
+    id: esperado
+    attributes:
+      label: O que você esperava
+    validations:
+      required: false
+  - type: input
+    id: versao
+    attributes:
+      label: Versão do programa
+      description: Aparece no canto da barra lateral, abaixo de "Extrator DATASUS" (por exemplo, v2.1.0).
+      placeholder: v2.1.0
+    validations:
+      required: true
+  - type: dropdown
+    id: como-roda
+    attributes:
+      label: Como você roda o programa
+      options:
+        - Executável (ExtratorDATASUS.exe)
+        - Pelo código (python -m extrator)
+    validations:
+      required: true
+  - type: dropdown
+    id: windows
+    attributes:
+      label: Sistema
+      options:
+        - Windows 11
+        - Windows 10
+        - Outro
+    validations:
+      required: true
+  - type: dropdown
+    id: base
+    attributes:
+      label: Base de dados envolvida
+      multiple: true
+      options:
+        - Internações (SIH)
+        - Mortalidade (SIM)
+        - Nascidos vivos (SINASC)
+        - Produção ambulatorial (SIA)
+        - Não se aplica
+    validations:
+      required: false
+  - type: textarea
+    id: registro
+    attributes:
+      label: Registro da coleta
+      description: |
+        Cole o fim do arquivo `execucao.log` da pasta do pedido e, se o erro foi na janela, o arquivo
+        `C:\Users\<usuário>\.datasus-extractor\interface.log`.
+      render: text
+    validations:
+      required: false
+  - type: textarea
+    id: pedido
+    attributes:
+      label: Pedido (opcional)
+      description: O conteúdo do `pedido.json` da pasta do pedido ajuda a reproduzir exatamente a mesma coleta.
+      render: json
+    validations:
+      required: false
+  - type: checkboxes
+    id: conferencias
+    attributes:
+      label: Antes de enviar
+      options:
+        - label: Procurei nas issues e não achei uma igual aberta.
+          required: true
+        - label: Tirei dados pessoais dos registros e do pedido.
+          required: true

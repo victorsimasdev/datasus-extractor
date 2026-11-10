@@ -236,6 +236,12 @@ Quando há release, o workflow roda os testes, cria a tag no commit do merge e p
 
 A coleta fixa de internações por arritmia (rodada de Jul/2025 a Ago/2026) está na tag [`v1.0.0`](https://github.com/victorsimasdev/datasus-extractor/releases/tag/v1.0.0). O mesmo pedido agora se monta na janela; o arquivo `tests/dados/pedido_fa.json` é esse pedido.
 
+## Como contribuir
+
+- **Erro, número diferente do site, sugestão ou dúvida**: abra uma [issue](https://github.com/victorsimasdev/datasus-extractor/issues/new/choose) e escolha o formulário. Cada um pede o que ajuda a resolver (versão, base, registro da coleta, valor da planilha e do site).
+- **Falha de segurança**: pelo [relato privado](https://github.com/victorsimasdev/datasus-extractor/security/advisories/new), nunca numa issue pública.
+- **Pull request**: commits e título no padrão `tipo: descrição`, em português (o tipo decide a próxima versão). O modelo do PR lista o que testar.
+
 ## Licença
 
 [MIT](LICENSE). Vulnerabilidades: veja [SECURITY.md](SECURITY.md).

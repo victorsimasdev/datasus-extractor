@@ -1,0 +1,78 @@
+name: Número diferente do site
+description: Um valor da planilha não bate com o que o TabNet mostra para a mesma consulta.
+title: "[Dado] "
+labels: [dados]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Cada número da planilha é copiado do site e conferido de novo com o PDF da consulta, então uma
+        diferença é importante. Antes de abrir:
+        - **Dados dos últimos seis meses** ainda são atualizados pelo DATASUS: o site pode ter mudado depois da coleta.
+        - Confira se o formulário do site está com **os mesmos filtros e período** do pedido (a aba EVIDÊNCIAS da planilha mostra o filtro de cada consulta).
+  - type: dropdown
+    id: base
+    attributes:
+      label: Base de dados
+      options:
+        - Internações (SIH)
+        - Mortalidade (SIM)
+        - Nascidos vivos (SINASC)
+        - Produção ambulatorial (SIA)
+    validations:
+      required: true
+  - type: input
+    id: celula
+    attributes:
+      label: Onde está o número na planilha
+      description: Aba, linha e coluna (ou a célula).
+      placeholder: Aba "JAN 2024", linha "3 REGIÃO SUDESTE", coluna "Internações" (célula B5)
+    validations:
+      required: true
+  - type: input
+    id: valor-planilha
+    attributes:
+      label: Valor na planilha
+      placeholder: "382027"
+    validations:
+      required: true
+  - type: input
+    id: valor-site
+    attributes:
+      label: Valor no site
+      placeholder: "382104"
+    validations:
+      required: true
+  - type: textarea
+    id: consulta
+    attributes:
+      label: Consulta feita no site
+      description: Período, linha, coluna, conteúdo e filtros que você usou no TabNet. Um print do resultado ajuda (pode arrastar a imagem para cá).
+      placeholder: |
+        Período: Jan/2024
+        Linha: Região · Conteúdo: Internações
+        Filtros: Sexo = Masc
+    validations:
+      required: true
+  - type: textarea
+    id: evidencia
+    attributes:
+      label: Evidência da coleta (opcional)
+      description: O PDF ou PNG dessa consulta, da pasta `evidencias` do pedido (o link está na aba EVIDÊNCIAS). Arraste o arquivo para cá.
+    validations:
+      required: false
+  - type: input
+    id: data-coleta
+    attributes:
+      label: Quando a coleta foi feita
+      placeholder: 10/11/2026
+    validations:
+      required: true
+  - type: input
+    id: versao
+    attributes:
+      label: Versão do programa
+      description: Aparece no canto da barra lateral (por exemplo, v2.1.0).
+      placeholder: v2.1.0
+    validations:
+      required: true
