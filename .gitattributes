@@ -1,0 +1,6 @@
+# Fora do zip das releases (git archive): só interessa a quem desenvolve.
+.github/            export-ignore
+tests/              export-ignore
+.gitattributes      export-ignore
+requirements-dev.txt export-ignore
+ferramentas/release.py export-ignore

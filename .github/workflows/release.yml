@@ -1,0 +1,83 @@
+name: Release
+
+# A cada merge na main, calcula a versão pelos commits desde a última tag
+# (release:/tipo!:/BREAKING CHANGE -> X.0.0, feat -> x.Y.0, fix -> x.y.Z; o resto não gera versão),
+# grava a versão e o CHANGELOG, cria a tag e publica a release com o zip.
+# Regras completas em ferramentas/release.py.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      versao:
+        description: "Versão a lançar (X.Y.Z). Deixe vazio para calcular pelos commits."
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Calcular a versão
+        id: versao
+        env:
+          FORCAR: ${{ inputs.versao }}
+        run: python ferramentas/release.py calcular --forcar "$FORCAR" >> "$GITHUB_OUTPUT"
+
+      - name: Sem release
+        if: steps.versao.outputs.versao == ''
+        run: echo "Nenhum commit feat, fix ou release desde a última tag — nada a lançar."
+
+      - name: Testar
+        if: steps.versao.outputs.versao != ''
+        run: |
+          pip install -r requirements-dev.txt
+          ruff check .
+          pytest -q
+
+      - name: Gravar versão e CHANGELOG
+        if: steps.versao.outputs.versao != ''
+        env:
+          VERSAO: ${{ steps.versao.outputs.versao }}
+        run: |
+          python ferramentas/release.py aplicar "$VERSAO" --notas "$RUNNER_TEMP/notas.md"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pyproject.toml extrator/__init__.py CHANGELOG.md
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: versão $VERSAO"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+          git tag -a "v$VERSAO" -m "v$VERSAO"
+          git push origin "v$VERSAO"
+
+      - name: Publicar a release
+        if: steps.versao.outputs.versao != ''
+        env:
+          VERSAO: ${{ steps.versao.outputs.versao }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git archive --format=zip --prefix="datasus-extractor-$VERSAO/" -o "datasus-extractor-$VERSAO.zip" "v$VERSAO"
+          gh release create "v$VERSAO" "datasus-extractor-$VERSAO.zip" \
+            --title "v$VERSAO" --notes-file "$RUNNER_TEMP/notas.md" --verify-tag
