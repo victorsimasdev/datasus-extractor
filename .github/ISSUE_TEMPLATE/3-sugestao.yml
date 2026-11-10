@@ -1,0 +1,42 @@
+name: Sugestão de melhoria
+description: Uma base nova, um campo, um formato de planilha ou outra ideia para o programa.
+title: "[Sugestão] "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: necessidade
+    attributes:
+      label: O que você precisa fazer
+      description: Conte o problema ou a tarefa, não só a solução. Isso ajuda a achar o melhor jeito de resolver.
+      placeholder: Preciso acompanhar óbitos por causa mês a mês para vários municípios e hoje monto um pedido por município.
+    validations:
+      required: true
+  - type: textarea
+    id: ideia
+    attributes:
+      label: Como você imagina
+      placeholder: Poder escolher vários municípios de uma vez e ter uma aba por município.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Parte do programa
+      multiple: true
+      options:
+        - Bases de dados (SIH, SIM, SINASC, SIA ou outra do TabNet)
+        - Montagem do pedido (filtros, períodos, colunas)
+        - Planilha (formato, abas, evidências)
+        - Coleta e fila
+        - Aparência e usabilidade
+        - Instalação e executável
+        - Outra
+    validations:
+      required: true
+  - type: textarea
+    id: alternativas
+    attributes:
+      label: Como você faz hoje (opcional)
+      description: Algum jeito de contornar que você já usa.
+    validations:
+      required: false

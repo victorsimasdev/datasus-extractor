@@ -1,0 +1,30 @@
+name: Dúvida de uso
+description: Como fazer algo no programa ou entender um resultado.
+title: "[Dúvida] "
+labels: [question]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Antes de perguntar, vale olhar o `LEIA-ME.txt` (dentro do zip do programa) e o
+        [README](https://github.com/victorsimasdev/datasus-extractor#readme): eles explicam os passos do pedido, o que é SR e o que sai na pasta.
+  - type: textarea
+    id: pergunta
+    attributes:
+      label: Sua dúvida
+      placeholder: Como faço para ter uma coluna por faixa etária e outra com as faixas somadas?
+    validations:
+      required: true
+  - type: textarea
+    id: tentativa
+    attributes:
+      label: O que você já tentou (opcional)
+    validations:
+      required: false
+  - type: input
+    id: versao
+    attributes:
+      label: Versão do programa (opcional)
+      description: Aparece no canto da barra lateral (por exemplo, v2.1.0).
+    validations:
+      required: false
