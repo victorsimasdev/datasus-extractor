@@ -41,6 +41,19 @@ def rodar(caminho_pedido, headless=True, limite_horas=72, espera_falha=300):
         return 3
 
 
+def _parada_pedida(pasta, segundos):
+    """Espera antes de tentar de novo, de olho no arquivo PARAR: sem isso, a parada pedida durante a
+    espera seria apagada como "antiga" quando a coleta recomeçasse. True se a parada foi pedida."""
+    fim = time.time() + segundos
+    while True:
+        if (pasta / "PARAR").exists():
+            (pasta / "PARAR").unlink(missing_ok=True)
+            return True
+        if time.time() >= fim:
+            return False
+        time.sleep(min(1.0, fim - time.time()))
+
+
 def _rodar(pedido, headless, limite_horas, espera_falha):
     plano = planejar(pedido)
     pasta = coleta.pasta_saida(pedido)
@@ -65,7 +78,10 @@ def _rodar(pedido, headless, limite_horas, espera_falha):
                 return 1
             log(f"Coleta interrompida ({type(e).__name__}: {str(e)[:200]}); continuo em {espera_falha // 60} min")
             coleta.status(pasta, fase="aguardando", motivo=str(e)[:300])
-            time.sleep(espera_falha)
+            if _parada_pedida(pasta, espera_falha):
+                log("Coleta parada a pedido. Rode de novo (ou coloque na fila) para continuar de onde parou.")
+                coleta.status(pasta, fase="interrompido")
+                return 130
     log("Coleta completa")
 
     coleta.status(pasta, fase="planilha")
