@@ -103,7 +103,8 @@ def _rodar(pedido, headless, limite_horas, espera_falha):
         "Conferência independente (texto dos PDFs x planilha):", *linhas_conf, "",
     ]), encoding="utf-8")
     fase = "concluido" if not erros else "erro"
-    coleta.status(pasta, fase=fase, planilha=str(r["planilha"]), celulas=r["celulas"], sr=r["sr"],
+    coleta.status(pasta, fase=fase, feitas=len(plano.consultas), total=len(plano.consultas),
+                  planilha=str(r["planilha"]), celulas=r["celulas"], sr=r["sr"],
                   erros_conferencia=len(erros), avisos_soma=len(r["problemas"]))
     log(f"Fim: {fase}. Erros na conferência: {len(erros)}. Relatório: {rel.name}")
     return 0 if not erros else 1

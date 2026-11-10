@@ -3,3 +3,4 @@ openpyxl==3.1.5
 pillow==13.0.0
 pypdf==6.21.4
 sv-ttk==2.6.1
+pywebview==6.1

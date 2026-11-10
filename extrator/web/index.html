@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<title>Extrator DATASUS</title>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<div class="app">
+  <aside class="lado">
+    <div class="marca">
+      <img src="icone.png" alt="">
+      <div><b>Extrator DATASUS</b><span>TabNet · v<span id="versao">2</span></span></div>
+    </div>
+    <div class="eyebrow secao-lado">Painéis</div>
+    <button class="nav" data-ir="painel"><svg data-icone="painel"></svg>Painel</button>
+    <button class="nav" data-ir="novo"><svg data-icone="novo"></svg>Novo pedido</button>
+    <button class="nav" data-ir="coletas"><svg data-icone="coletas"></svg>Minhas coletas<span class="contador" id="contador-fila" hidden></span></button>
+    <button class="nav" data-ir="config"><svg data-icone="config"></svg>Configurações</button>
+    <div class="eyebrow secao-lado">Começar por base</div>
+    <div id="lista-bases"></div>
+    <div class="rodape-lado">
+      <div class="ao-vivo"><i class="ponto" id="ponto-vivo"></i><span id="texto-vivo">carregando…</span></div>
+      <div class="temas" id="temas">
+        <button data-tema="claro">Claro</button><button data-tema="escuro">Escuro</button><button data-tema="auto">Auto</button>
+      </div>
+    </div>
+  </aside>
+  <main class="principal">
+    <header class="topo">
+      <div><h1 id="titulo">Painel</h1></div>
+      <span class="contexto" id="contexto"></span>
+      <div class="acoes" id="acoes-topo"></div>
+    </header>
+    <div class="rolagem" id="rolagem"><div class="carregando"><div class="esqueleto" style="width:220px"></div>Carregando opções do TabNet…</div></div>
+    <footer class="rodape-passo" id="rodape-passo" hidden></footer>
+  </main>
+</div>
+<div class="toasts" id="toasts"></div>
+<script src="app.js"></script>
+</body>
+</html>

@@ -29,13 +29,15 @@ pip install -r requirements.txt
 
 ## Uso
 
-Abrir a janela e montar um pedido:
+Abrir o programa:
 
 ```bash
 python -m extrator
 ```
 
-Os seis passos da janela:
+A interface tem quatro telas: **Painel** (alertas, números do momento e todas as coletas), **Novo pedido**, **Minhas coletas** e **Configurações**. Ela roda numa janela de desktop (pywebview) com a interface em HTML; sem o pywebview instalado, abre a janela clássica, que também está em `python -m extrator classica`.
+
+Os seis passos do novo pedido:
 
 1. **Base de dados** e abrangência (Brasil inteiro ou estados escolhidos).
 2. **O que contar**, o que vai em cada linha da planilha e, se quiser, quebras em colunas.
@@ -45,6 +47,11 @@ Os seis passos da janela:
 6. **Revisar**: prévia da planilha e resumo.
 
 Ao clicar em **Gerar pedido**, a janela salva `pedido.json` na pasta de saída e coloca o pedido na **fila de coletas**.
+
+### Aparência e atalhos
+
+- Tema **claro**, **escuro** ou **seguir o Windows**, no rodapé da barra lateral ou com **Ctrl+D**. A escolha e o tamanho da janela ficam guardados.
+- **Ctrl+N** novo pedido, **Ctrl+Enter** avança, **Alt+←** volta, **Ctrl+1 a 6** vai direto ao passo, **Ctrl+H** abre "Minhas coletas".
 
 ### Fila e histórico
 
@@ -125,7 +132,9 @@ Regras do site que o plano respeita (testadas no site):
 
 | Caminho | Função |
 |---|---|
-| `extrator/janela.py` | Janela de pedido. |
+| `extrator/app.py` | Interface: janela pywebview e a ponte com o Python. |
+| `extrator/web/` | Telas da interface (HTML, CSS e JavaScript). |
+| `extrator/janela.py` | Janela clássica (Tkinter) e leitura das opções usada pela interface. |
 | `extrator/formularios.py` | Opções dos formulários do TabNet (leitura no site e acesso). |
 | `extrator/opcoes_formularios.json` | Opções de todos os campos dos 112 formulários. |
 | `extrator/pedido.py` | Pedido → plano de consultas e layout da planilha. |
@@ -134,6 +143,8 @@ Regras do site que o plano respeita (testadas no site):
 | `extrator/planilha.py` | Planilha a partir dos resultados, com as abas EVIDÊNCIAS e _MAPA. |
 | `extrator/conferencia.py` | Conferência independente pelos PDFs. |
 | `extrator/rodar.py` | Execução completa e sem supervisão. |
+| `extrator/tema.py` | Temas claro e escuro, preferências da janela. |
+| `extrator/recursos/` | Ícone do programa (PNG e ICO). |
 | `extrator/fila.py` | Fila e histórico de coletas, travas entre processos (uma coleta e uma janela por vez). |
 | `extrator/comum.py` | Gravação atômica, conferência de cópias e prevenção de suspensão. |
 | `ferramentas/` | Conferências contra o site: a janela mostra tudo o que os formulários têm, e como o site soma seleções múltiplas. |
