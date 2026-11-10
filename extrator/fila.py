@@ -263,14 +263,18 @@ def iniciar_executor():
     """Abre o executor da fila numa janela própria, se ainda não estiver rodando."""
     if fila_rodando():
         return False
+    env = None
     if getattr(sys, "frozen", False):  # executável (.exe): o próprio programa roda a fila, sem console
         raiz, args = Path(sys.executable).parent, [sys.executable, "fila"]
         flags = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+        # instância independente, com a própria pasta temporária: a de quem abriu a fila é apagada
+        # quando ele fecha (PyInstaller --onefile)
+        env = {**os.environ, "PYINSTALLER_RESET_ENVIRONMENT": "1"}
     else:
         raiz, args = Path(__file__).resolve().parent.parent, [sys.executable, "-m", "extrator", "fila"]
         flags = subprocess.CREATE_NEW_CONSOLE if sys.platform == "win32" else 0
     if sys.platform == "win32":
-        subprocess.Popen(args, cwd=raiz, creationflags=flags)
+        subprocess.Popen(args, cwd=raiz, creationflags=flags, env=env)
     else:
-        subprocess.Popen(args, cwd=raiz, start_new_session=True)
+        subprocess.Popen(args, cwd=raiz, start_new_session=True, env=env)
     return True

@@ -123,3 +123,4 @@ def test_executor_no_exe_roda_o_proprio_programa(monkeypatch, tmp_path):
     args, kw = chamadas[0]
     assert args == [str(tmp_path / "ExtratorDATASUS.exe"), "fila"]
     assert kw["cwd"] == tmp_path
+    assert kw["env"]["PYINSTALLER_RESET_ENVIRONMENT"] == "1"
