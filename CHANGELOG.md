@@ -5,6 +5,7 @@ O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o 
 ## [Não lançado]
 
 ### Adicionado
+- Interface nova em HTML numa janela de desktop (pywebview): Painel com alertas e números do momento, Novo pedido em 6 passos com prévia da planilha, Minhas coletas com registro ao vivo e Configurações. A janela Tkinter continua em `python -m extrator classica`.
 - Temas claro, escuro e "seguir o Windows" (Ctrl+D alterna), com barra de título escura no Windows.
 - Ícone do programa na janela e na barra de tarefas.
 - Atalhos de teclado para navegar pelos passos e abrir as coletas.

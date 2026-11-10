@@ -29,13 +29,15 @@ pip install -r requirements.txt
 
 ## Uso
 
-Abrir a janela e montar um pedido:
+Abrir o programa:
 
 ```bash
 python -m extrator
 ```
 
-Os seis passos da janela:
+A interface tem quatro telas: **Painel** (alertas, números do momento e todas as coletas), **Novo pedido**, **Minhas coletas** e **Configurações**. Ela roda numa janela de desktop (pywebview) com a interface em HTML; sem o pywebview instalado, abre a janela clássica, que também está em `python -m extrator classica`.
+
+Os seis passos do novo pedido:
 
 1. **Base de dados** e abrangência (Brasil inteiro ou estados escolhidos).
 2. **O que contar**, o que vai em cada linha da planilha e, se quiser, quebras em colunas.
@@ -48,8 +50,8 @@ Ao clicar em **Gerar pedido**, a janela salva `pedido.json` na pasta de saída e
 
 ### Aparência e atalhos
 
-- Tema **claro**, **escuro** ou **seguir o Windows** (padrão), no seletor da barra lateral ou com **Ctrl+D**. A escolha e o tamanho da janela ficam guardados.
-- **Ctrl+Enter** avança, **Alt+←** volta, **Ctrl+1 a 6** vai direto ao passo, **Ctrl+H** abre "Minhas coletas" e **Esc** fecha essa tela.
+- Tema **claro**, **escuro** ou **seguir o Windows**, no rodapé da barra lateral ou com **Ctrl+D**. A escolha e o tamanho da janela ficam guardados.
+- **Ctrl+N** novo pedido, **Ctrl+Enter** avança, **Alt+←** volta, **Ctrl+1 a 6** vai direto ao passo, **Ctrl+H** abre "Minhas coletas".
 
 ### Fila e histórico
 
@@ -130,7 +132,9 @@ Regras do site que o plano respeita (testadas no site):
 
 | Caminho | Função |
 |---|---|
-| `extrator/janela.py` | Janela de pedido. |
+| `extrator/app.py` | Interface: janela pywebview e a ponte com o Python. |
+| `extrator/web/` | Telas da interface (HTML, CSS e JavaScript). |
+| `extrator/janela.py` | Janela clássica (Tkinter) e leitura das opções usada pela interface. |
 | `extrator/formularios.py` | Opções dos formulários do TabNet (leitura no site e acesso). |
 | `extrator/opcoes_formularios.json` | Opções de todos os campos dos 112 formulários. |
 | `extrator/pedido.py` | Pedido → plano de consultas e layout da planilha. |
