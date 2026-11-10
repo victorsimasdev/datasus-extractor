@@ -29,3 +29,13 @@ def test_preferencias_sao_gravadas_e_lidas():
 def test_preferencia_corrompida_nao_impede_a_janela(tmp_path):
     (tmp_path / "preferencias.json").write_text("{quebrado", encoding="utf-8")
     assert tema.preferencias() == {}
+
+
+def test_tema_rosa_vale_como_claro_na_janela_classica():
+    from extrator import app, tema
+
+    assert tema.resolver("rosa") == "claro"
+    assert app.FUNDOS["rosa"] == "#fdf2f6"
+    web = app.WEB
+    assert ':root[data-theme="pink"]' in (web / "app.css").read_text(encoding="utf-8")
+    assert 'data-tema="rosa"' in (web / "index.html").read_text(encoding="utf-8")
