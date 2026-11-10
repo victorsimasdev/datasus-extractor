@@ -46,6 +46,11 @@ Os seis passos da janela:
 
 Ao clicar em **Gerar pedido**, a janela salva `pedido.json` na pasta de saída e coloca o pedido na **fila de coletas**.
 
+### Aparência e atalhos
+
+- Tema **claro**, **escuro** ou **seguir o Windows** (padrão), no seletor da barra lateral ou com **Ctrl+D**. A escolha e o tamanho da janela ficam guardados.
+- **Ctrl+Enter** avança, **Alt+←** volta, **Ctrl+1 a 6** vai direto ao passo, **Ctrl+H** abre "Minhas coletas" e **Esc** fecha essa tela.
+
 ### Fila e histórico
 
 - **Uma coleta por vez**: as coletas rodam na ordem da fila, numa janela própria. Nunca há duas coletas ao mesmo tempo, nem duas janelas do programa abertas.
@@ -134,6 +139,8 @@ Regras do site que o plano respeita (testadas no site):
 | `extrator/planilha.py` | Planilha a partir dos resultados, com as abas EVIDÊNCIAS e _MAPA. |
 | `extrator/conferencia.py` | Conferência independente pelos PDFs. |
 | `extrator/rodar.py` | Execução completa e sem supervisão. |
+| `extrator/tema.py` | Temas claro e escuro, preferências da janela. |
+| `extrator/recursos/` | Ícone do programa (PNG e ICO). |
 | `extrator/fila.py` | Fila e histórico de coletas, travas entre processos (uma coleta e uma janela por vez). |
 | `extrator/comum.py` | Gravação atômica, conferência de cópias e prevenção de suspensão. |
 | `ferramentas/` | Conferências contra o site: a janela mostra tudo o que os formulários têm, e como o site soma seleções múltiplas. |
