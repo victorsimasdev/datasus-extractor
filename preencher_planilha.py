@@ -9,6 +9,9 @@ Gera a cópia preenchida da planilha a partir do que coletar_datasus.py coletou.
     2. soma das internações e óbitos dos 27 estados == TOTAL nacional;
     3. TOTAL nacional por UF == TOTAL nacional por Região;
     4. valores já digitados à mão na planilha original x valores do site.
+  Diferença de exatamente R$ 0,01 só no valor médio entre a consulta estadual e a nacional é
+  arredondamento do próprio TabNet: vira AVISO (a planilha usa a estadual). Qualquer outra falha
+  faz o script terminar com código 1, o que impede a entrega em rodar_noite.py.
 - Aba extra "EVIDÊNCIAS": cada valor com o texto exato do site, data/hora e link do PDF/PNG.
 
 Uso:
@@ -44,6 +47,15 @@ def nome_limpo(s):
     return re.sub(r"^região\s+", "", s)
 
 
+def so_arredondamento(estadual, nacional):
+    """True se as duas consultas só diferem no valor médio, e por no máximo R$ 0,01."""
+    outros = [c for c in CAMPOS if c != "valor_medio"]
+    if any(estadual[c] != nacional[c] for c in outros):
+        return False
+    a, b = estadual["valor_medio"], nacional["valor_medio"]
+    return a is not None and b is not None and round(abs(a - b), 2) <= 0.01
+
+
 def valor_celula(v):
     return int(v) if float(v).is_integer() else v
 
@@ -61,7 +73,7 @@ def main():
     for c in ev[1]:
         c.font = Font(bold=True)
 
-    problemas, divergencias_manuais, faltando = [], [], []
+    problemas, divergencias_manuais, faltando, avisos = [], [], [], []
     preenchidas = conferidos = 0
 
     def link(celula, caminho):
@@ -111,6 +123,10 @@ def main():
                 if iguais:
                     situacao = "OK - idêntico"
                     conferidos += 1
+                elif total is not None and outro is not None and so_arredondamento(total, outro):
+                    situacao = "OK - R$ 0,01 no valor médio (arredondamento do TabNet)"
+                    avisos.append(f"{ws.title} / {nome}: estadual={total['texto_site']} "
+                                  f"nacional={outro['texto_site']} (arredondamento do TabNet; usado o estadual)")
                 else:
                     situacao = "DIFERENTE"
                     problemas.append(f"{ws.title} / {nome}: estadual={total and total['texto_site']} "
@@ -174,6 +190,9 @@ def main():
 
     print(f"Células preenchidas: {preenchidas}")
     print(f"Estado/mês conferidos com a consulta nacional e idênticos: {conferidos}")
+    print(f"Avisos (R$ 0,01 de arredondamento no valor médio): {len(avisos)}")
+    for a in avisos:
+        print("  AVISO", a)
     print(f"Problemas nas conferências: {len(problemas)}")
     for p in problemas:
         print("  PROBLEMA", p)
@@ -183,6 +202,8 @@ def main():
     print(f"Consultas ainda não coletadas: {len(faltando)}"
           + ("" if demo or not faltando else "\n  " + "\n  ".join(faltando)))
     print(f"Gravado: {destino.name}  (original intacto)")
+    if not demo and (problemas or divergencias_manuais or faltando):
+        sys.exit(1)
 
 
 if __name__ == "__main__":

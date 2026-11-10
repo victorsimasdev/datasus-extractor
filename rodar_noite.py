@@ -5,7 +5,8 @@ Execução sem supervisão (a noite inteira):
      (servidor fora do ar, internet, Chrome), espera e continua de onde parou;
   3. gera a cópia preenchida da planilha e o relatório de conferência;
   4. monta a pasta de entrega (planilha + evidências + relatório, sem código);
-  5. grava status_execucao.json com o resultado.
+  5. roda a conferência independente pelos PDFs (conferir_evidencias.py) na pasta de entrega;
+  6. grava status_execucao.json com o resultado ("concluido" só com 0 erros).
 
 Uso:  python rodar_noite.py
 """
@@ -100,9 +101,23 @@ def main():
         shutil.rmtree(ENTREGA)
     ENTREGA.mkdir()
     shutil.copy2(PASTA / "FA - INTERNAÇÕES - preenchida.xlsx", ENTREGA)
-    shutil.copy2(relatorio, ENTREGA)
     shutil.copytree(PASTA / "evidencias", ENTREGA / "evidencias")
     n_arquivos = sum(1 for p in (ENTREGA / "evidencias").rglob("*") if p.is_file())
+
+    status(fase="conferencia")
+    conf = subprocess.run([sys.executable, "-u", str(PASTA / "conferir_evidencias.py"), str(ENTREGA)], cwd=PASTA,
+                          capture_output=True, text=True, encoding="utf-8", env=ENV)
+    with relatorio.open("a", encoding="utf-8") as f:
+        f.write("\n== Conferência independente (texto dos PDFs x planilha entregue) ==\n"
+                + conf.stdout + conf.stderr)
+    log("Conferência:\n" + conf.stdout + conf.stderr)
+    shutil.copy2(relatorio, ENTREGA)
+    erros_conf = next((int(linha.split(":")[1]) for linha in conf.stdout.splitlines()
+                       if linha.startswith("ERROS:")), None)
+    if conf.returncode != 0 or erros_conf != 0:
+        status(fase="erro", motivo=f"conferência independente com erros: {erros_conf}", pasta_entrega=str(ENTREGA))
+        log(f"Conferência independente com erros ({erros_conf}); ver o relatório")
+        sys.exit(1)
 
     def numero(rotulo):
         for l in saida.stdout.splitlines():
@@ -116,6 +131,8 @@ def main():
            conferidos_identicos=numero("Estado/mês conferidos"),
            problemas_conferencia=numero("Problemas nas conferências"),
            diferencas_digitado=numero("Diferenças com o que já estava digitado"),
+           avisos_arredondamento=numero("Avisos"),
+           erros_conferencia_independente=erros_conf,
            pasta_entrega=str(ENTREGA))
     log(f"Concluído. Pasta de entrega: {ENTREGA.name} ({n_arquivos} arquivos de evidência)")
 
