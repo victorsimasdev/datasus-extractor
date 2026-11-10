@@ -23,7 +23,8 @@ import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox, simpledialog, ttk
 
-from . import fila
+from . import fila, tema
+from .tema import C
 from .coleta import pasta_saida
 from .comum import gravar_json
 from .formularios import ARQUIVO_OPCOES
@@ -47,13 +48,8 @@ FONTE = ("Segoe UI", 10)
 FONTE_P = ("Segoe UI", 9)
 FONTE_T = ("Segoe UI Semibold", 15)
 FONTE_ST = ("Segoe UI Semibold", 11)
-COR_MUDA = "#5f6368"
-COR_ERRO = "#b42318"
-COR_ACENTO = "#005fb8"
-COR_FUNDO = "#fafafa"
-COR_FUNDO_LADO = "#eef1f5"
-COR_BORDA = "#dfe3e8"
-COR_CARTAO = "#ffffff"
+ICONE_PNG = Path(__file__).resolve().parent / "recursos" / "icone.png"
+ICONE_ICO = Path(__file__).resolve().parent / "recursos" / "icone.ico"
 
 
 def chave_periodo(rotulo):
@@ -177,8 +173,8 @@ class ConstrutorItens(ttk.Frame):
         self.tv_op.column("marca", width=34, minwidth=34, stretch=False, anchor="center")
         self.tv_op.column("opcao", width=330, anchor="w")
         self.tv_op.column("status", width=95, stretch=False, anchor="w")
-        self.tv_op.tag_configure("marcada", background="#e3edfc")
-        self.tv_op.tag_configure("usada", foreground=COR_ACENTO)
+        self.tv_op.tag_configure("marcada", background=C["acento_suave"])
+        self.tv_op.tag_configure("usada", foreground=C["acento"])
         self.tv_op.grid(row=0, column=0, sticky="nsew")
         sb = ttk.Scrollbar(quadro, command=self.tv_op.yview)
         sb.grid(row=0, column=1, sticky="ns")
@@ -382,31 +378,61 @@ class ConstrutorItens(ttk.Frame):
                             "Duplo clique num item para mudar o nome dele na planilha.")
 
 
+class AreaRolavel(ttk.Frame):
+    """Conteúdo do passo com rolagem quando a janela é menor que ele (roda do mouse incluída)."""
+
+    def __init__(self, pai):
+        super().__init__(pai)
+        self.columnconfigure(0, weight=1)
+        self.rowconfigure(0, weight=1)
+        self.canvas = tk.Canvas(self, bg=C["fundo"], highlightthickness=0, bd=0)
+        self.canvas.grid(row=0, column=0, sticky="nsew")
+        self.barra = ttk.Scrollbar(self, orient="vertical", command=self.canvas.yview)
+        self.canvas.configure(yscrollcommand=self._barra)
+        self.interior = ttk.Frame(self.canvas)
+        self.janela = self.canvas.create_window(0, 0, window=self.interior, anchor="nw")
+        self.interior.bind("<Configure>", lambda e: self._ajustar())
+        self.canvas.bind("<Configure>", lambda e: self._ajustar())
+        self.canvas.bind("<Enter>", lambda e: self.bind_all("<MouseWheel>", self._roda))
+        self.canvas.bind("<Leave>", lambda e: self.unbind_all("<MouseWheel>"))
+
+    def _ajustar(self):
+        largura, altura = self.canvas.winfo_width(), self.canvas.winfo_height()
+        alt_int = self.interior.winfo_reqheight()
+        self.canvas.itemconfigure(self.janela, width=largura, height=max(alt_int, altura))
+        self.canvas.configure(scrollregion=(0, 0, largura, max(alt_int, altura)))
+
+    def _barra(self, ini, fim):
+        if float(ini) <= 0 and float(fim) >= 1:
+            self.barra.grid_remove()
+        else:
+            self.barra.grid(row=0, column=1, sticky="ns")
+        self.barra.set(ini, fim)
+
+    def _roda(self, e):
+        w = e.widget
+        if isinstance(w, str) or w.winfo_class() in ("Treeview", "Listbox", "Text", "TCombobox"):
+            return  # a lista sob o mouse rola sozinha
+        if self.interior.winfo_reqheight() > self.canvas.winfo_height():
+            self.canvas.yview_scroll(int(-e.delta / 120), "units")
+
+    def topo(self):
+        self.canvas.yview_moveto(0)
+
+
 class Janela(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Novo pedido de dados - DATASUS / TabNet")
-        self.geometry("1380x920")
-        self.minsize(1240, 760)
-        estilo = ttk.Style(self)
-        try:
-            import sv_ttk  # tema moderno (Windows 11); sem ele, usa o tema padrão do Windows
-            sv_ttk.set_theme("light")
-        except Exception:
-            if "vista" in estilo.theme_names():
-                estilo.theme_use("vista")
-        self.configure(bg=COR_FUNDO)
-        estilo.configure(".", font=FONTE)
-        estilo.configure("TLabelframe.Label", font=("Segoe UI Semibold", 10))
-        estilo.configure("Passo.TLabel", font=("Segoe UI Semibold", 10))
-        estilo.configure("Lado.TLabel", background=COR_FUNDO_LADO)
-        estilo.configure("Lado.TFrame", background=COR_FUNDO_LADO)
-        estilo.configure("Muda.TLabel", foreground=COR_MUDA, font=FONTE_P)
-        estilo.configure("Erro.TLabel", foreground=COR_ERRO)
-        estilo.configure("Titulo.TLabel", font=FONTE_T)
-        estilo.configure("Sub.TLabel", font=FONTE_ST)
-        estilo.configure("Treeview", rowheight=26)
-        estilo.configure("Treeview.Heading", font=("Segoe UI Semibold", 9))
+        self.title("Extrator DATASUS · Novo pedido")
+        self.prefs = tema.preferencias()
+        self._posicionar(self.prefs.get("tamanho") or "1380x920")
+        self.minsize(1180, 720)
+        self.attributes("-alpha", 0.0)  # aparece com um fade curto
+        self.v_tema = tk.StringVar(value=self.prefs.get("tema", "auto"))
+        self.tema_resolvido = tema.aplicar(self, self.v_tema.get())
+        self._icone(self)
+        self._agendado_est = None
+        self._toast = None
 
         self.passo = 0
         self.base = None  # formulário em uso (nacional ou dos estados escolhidos)
@@ -438,67 +464,173 @@ class Janela(tk.Tk):
         self._montar_estrutura()
         self.escolher_base(BASES[0].chave)
         self.ir(0)
+        self._atalhos()
+        self.protocol("WM_DELETE_WINDOW", self._fechar)
+        self._aparecer(0.0)
+
+    # ---------- ícone, aparência e atalhos ----------
+    @staticmethod
+    def _icone(janela):
+        try:
+            if sys.platform == "win32" and ICONE_ICO.is_file():
+                janela.iconbitmap(default=str(ICONE_ICO))
+            if ICONE_PNG.is_file():
+                janela._img_icone = tk.PhotoImage(file=str(ICONE_PNG))
+                janela.iconphoto(True, janela._img_icone)
+        except tk.TclError:
+            pass
+
+    def _aparecer(self, alfa):
+        alfa = min(1.0, alfa + 0.2)
+        self.attributes("-alpha", alfa)
+        if alfa < 1.0:
+            self.after(25, self._aparecer, alfa)
+
+    def _atalhos(self):
+        self.bind_all("<Control-Return>", lambda e: self.avancar())
+        self.bind_all("<Alt-Right>", lambda e: self.avancar())
+        self.bind_all("<Alt-Left>", lambda e: self.ir(self.passo - 1))
+        for i in range(len(PASSOS)):
+            self.bind_all(f"<Control-Key-{i + 1}>", lambda e, i=i: self.ir(i))
+        self.bind_all("<Control-h>", lambda e: self.abrir_coletas())
+        self.bind_all("<Control-d>", lambda e: self._alternar_tema())
+
+    def _posicionar(self, tamanho):
+        """Abre centralizada no monitor principal, com o último tamanho usado (nunca fora da tela)."""
+        try:
+            larg, alt = (int(x) for x in tamanho.split("x"))
+        except ValueError:
+            larg, alt = 1380, 920
+        tela_l, tela_a = self.winfo_screenwidth(), self.winfo_screenheight()
+        larg, alt = min(larg, tela_l), min(alt, tela_a - 40)
+        self.geometry(f"{larg}x{alt}+{max(0, (tela_l - larg) // 2)}+{max(0, (tela_a - alt) // 2 - 20)}")
+
+    def _fechar(self):
+        try:
+            if self.state() == "normal":
+                tema.salvar_preferencia(tamanho=f"{self.winfo_width()}x{self.winfo_height()}")
+        finally:
+            self.destroy()
+
+    def _alternar_tema(self):
+        self.v_tema.set("claro" if self.tema_resolvido == "escuro" else "escuro")
+        self._trocar_tema()
+
+    def _trocar_tema(self, *_):
+        tema.salvar_preferencia(tema=self.v_tema.get())
+        novo = tema.resolver(self.v_tema.get())
+        if novo == self.tema_resolvido:
+            return
+        self.tema_resolvido = tema.aplicar(self, self.v_tema.get())
+        coletas_abertas = getattr(self, "janela_coletas", None) is not None and self.janela_coletas.winfo_exists()
+        for w in self.winfo_children():
+            w.destroy()
+        self._montar_estrutura()
+        self.ir(self.passo)
+        if coletas_abertas:
+            self.abrir_coletas()
+        self.toast(f"Tema {tema.OPCOES[novo].lower()} aplicado")
+
+    def toast(self, texto, tipo="info", duracao=3500):
+        """Aviso curto no rodapé da janela, que some sozinho (sem precisar clicar em OK)."""
+        if self._toast is not None and self._toast.winfo_exists():
+            self._toast.destroy()
+        cor = {"info": C["toast"], "erro": C["erro"], "ok": C["sucesso"]}[tipo]
+        caixa = tk.Frame(self, bg=cor, padx=18, pady=10)
+        tk.Label(caixa, text=texto, bg=cor, fg=C["toast_texto"] if tipo == "info" else "#ffffff",
+                 font=("Segoe UI", 10), wraplength=520, justify="left").pack()
+        caixa.place(relx=0.5, rely=1.0, anchor="s", y=-76)
+        caixa.lift()
+        self._toast = caixa
+        self.after(duracao, lambda: caixa.winfo_exists() and caixa.destroy())
 
     # ---------- estrutura ----------
     def _montar_estrutura(self):
         self.columnconfigure(1, weight=1)
         self.rowconfigure(0, weight=1)
 
-        lado = tk.Frame(self, bg=COR_FUNDO_LADO, padx=16, pady=18)
+        lado = tk.Frame(self, bg=C["lado"], padx=16, pady=18)
         lado.grid(row=0, column=0, sticky="ns")
-        tk.Label(lado, text="DATASUS · TabNet", font=("Segoe UI", 9), fg=COR_MUDA, bg=COR_FUNDO_LADO).pack(anchor="w")
-        tk.Label(lado, text="Novo pedido", font=FONTE_T, bg=COR_FUNDO_LADO).pack(anchor="w", pady=(0, 16))
-        self.rot_passos, self.sub_passos, self.num_passos = [], [], []
+        topo = tk.Frame(lado, bg=C["lado"])
+        topo.pack(anchor="w", fill="x", pady=(0, 18))
+        if ICONE_PNG.is_file():
+            self._img_logo = tk.PhotoImage(file=str(ICONE_PNG)).subsample(6, 6)
+            tk.Label(topo, image=self._img_logo, bg=C["lado"]).grid(row=0, column=0, rowspan=2, padx=(0, 10))
+        tk.Label(topo, text="Extrator DATASUS", font=("Segoe UI Semibold", 13), fg=C["texto"],
+                 bg=C["lado"]).grid(row=0, column=1, sticky="sw")
+        tk.Label(topo, text="Novo pedido · TabNet", font=("Segoe UI", 9), fg=C["muda"],
+                 bg=C["lado"]).grid(row=1, column=1, sticky="nw")
+        self.rot_passos, self.sub_passos, self.num_passos, self.linhas_passos, self.barras_passos = [], [], [], [], []
         for i, nome in enumerate(PASSOS):
-            linha = tk.Frame(lado, bg=COR_FUNDO_LADO, cursor="hand2")
-            linha.pack(anchor="w", fill="x", pady=4)
-            num = tk.Label(linha, text=str(i + 1), width=2, font=("Segoe UI Semibold", 10), bg="#d5dbe3",
-                           fg="black", cursor="hand2")
-            num.grid(row=0, column=0, rowspan=2, sticky="n", padx=(0, 10), ipady=2)
-            lbl = tk.Label(linha, text=nome, font=FONTE, bg=COR_FUNDO_LADO, anchor="w", cursor="hand2")
-            lbl.grid(row=0, column=1, sticky="w")
-            sub_ = tk.Label(linha, text="", font=("Segoe UI", 8), fg=COR_MUDA, bg=COR_FUNDO_LADO, anchor="w",
+            linha = tk.Frame(lado, bg=C["lado"], cursor="hand2", pady=5)
+            linha.pack(anchor="w", fill="x", pady=1)
+            barra = tk.Frame(linha, bg=C["lado"], width=3)
+            barra.grid(row=0, column=0, rowspan=2, sticky="ns", padx=(0, 8))
+            num = tk.Label(linha, text=str(i + 1), width=2, font=("Segoe UI Semibold", 10), bg=C["num"],
+                           fg=C["texto"], cursor="hand2")
+            num.grid(row=0, column=1, rowspan=2, sticky="n", padx=(0, 10), ipady=2)
+            lbl = tk.Label(linha, text=nome, font=FONTE, bg=C["lado"], fg=C["texto"], anchor="w", cursor="hand2")
+            lbl.grid(row=0, column=2, sticky="w")
+            sub_ = tk.Label(linha, text="", font=("Segoe UI", 8), fg=C["muda"], bg=C["lado"], anchor="w",
                             justify="left", wraplength=150, cursor="hand2")
-            sub_.grid(row=1, column=1, sticky="w")
+            sub_.grid(row=1, column=2, sticky="w")
+            partes = (linha, barra, lbl, sub_)
             for w in (linha, num, lbl, sub_):
                 w.bind("<Button-1>", lambda e, i=i: self.ir(i))
+                w.bind("<Enter>", lambda e, ps=partes: [x.config(bg=C["hover"]) for x in ps if x is not ps[1]])
+                w.bind("<Leave>", lambda e, ps=partes: [x.config(bg=C["lado"]) for x in ps if x is not ps[1]])
             self.rot_passos.append(lbl)
             self.sub_passos.append(sub_)
             self.num_passos.append(num)
+            self.barras_passos.append(barra)
 
-        tk.Frame(lado, bg=COR_BORDA, height=1).pack(fill="x", pady=(18, 12))
+        tk.Frame(lado, bg=C["borda"], height=1).pack(fill="x", pady=(16, 12))
         ttk.Button(lado, text="📋  Minhas coletas", command=self.abrir_coletas).pack(anchor="w", fill="x")
-        self.l_coleta_atual = tk.Label(lado, text="", font=("Segoe UI", 8), fg=COR_MUDA, bg=COR_FUNDO_LADO,
+        self.l_coleta_atual = tk.Label(lado, text="", font=("Segoe UI", 8), fg=C["muda"], bg=C["lado"],
                                        justify="left", wraplength=170, anchor="w")
         self.l_coleta_atual.pack(anchor="w", fill="x", pady=(6, 0))
+
+        base_tema = tk.Frame(lado, bg=C["lado"])
+        base_tema.pack(side="bottom", fill="x")
+        tk.Label(base_tema, text="Aparência", font=("Segoe UI", 8), fg=C["muda"], bg=C["lado"]).pack(anchor="w")
+        cb = ttk.Combobox(base_tema, state="readonly", width=18, values=list(tema.OPCOES.values()))
+        cb.set(tema.OPCOES.get(self.v_tema.get(), tema.OPCOES["auto"]))
+        cb.pack(anchor="w", fill="x", pady=(2, 0))
+        cb.bind("<<ComboboxSelected>>", lambda e: (self.v_tema.set(
+            next(k for k, v in tema.OPCOES.items() if v == cb.get())), self._trocar_tema()))
+        tk.Label(base_tema, text="Ctrl+D alterna claro/escuro", font=("Segoe UI", 8), fg=C["muda"],
+                 bg=C["lado"]).pack(anchor="w", pady=(4, 0))
         self.after(500, self._atualizar_coleta_atual)
 
-        self.area = ttk.Frame(self, padding=(26, 18, 18, 6))
+        self.area = ttk.Frame(self, padding=(26, 14, 18, 6))
         self.area.grid(row=0, column=1, sticky="nsew")
         self.area.columnconfigure(0, weight=1)
-        self.area.rowconfigure(2, weight=1)
+        self.area.rowconfigure(3, weight=1)
+        self.progresso_passos = ttk.Progressbar(self.area, maximum=len(PASSOS), mode="determinate")
+        self.progresso_passos.grid(row=0, column=0, sticky="ew", pady=(0, 12))
         self.l_titulo = ttk.Label(self.area, style="Titulo.TLabel")
-        self.l_titulo.grid(row=0, column=0, sticky="w")
-        self.l_ajuda = ttk.Label(self.area, style="Muda.TLabel", wraplength=660, justify="left")
-        self.l_ajuda.grid(row=1, column=0, sticky="w", pady=(2, 12))
-        self.conteudo = ttk.Frame(self.area)
-        self.conteudo.grid(row=2, column=0, sticky="nsew")
+        self.l_titulo.grid(row=1, column=0, sticky="w")
+        self.l_ajuda = ttk.Label(self.area, style="Muda.TLabel", wraplength=680, justify="left")
+        self.l_ajuda.grid(row=2, column=0, sticky="w", pady=(2, 12))
+        self.rolagem = AreaRolavel(self.area)
+        self.rolagem.grid(row=3, column=0, sticky="nsew")
+        self.conteudo = self.rolagem.interior
 
         resumo = ttk.Frame(self, padding=(16, 18))
         resumo.grid(row=0, column=2, sticky="ns")
         ttk.Label(resumo, text="Resumo do pedido", style="Sub.TLabel").pack(anchor="w")
         self.t_resumo = tk.Text(resumo, width=34, height=20, wrap="word", font=FONTE_P, relief="flat",
-                                bg=COR_FUNDO, padx=0, pady=8, cursor="arrow", highlightthickness=0)
+                                bg=C["fundo"], fg=C["texto"], padx=0, pady=8, cursor="arrow", highlightthickness=0)
         self.t_resumo.pack(fill="both", expand=True)
-        self.t_resumo.tag_configure("k", foreground=COR_MUDA, font=("Segoe UI Semibold", 8))
-        est = tk.Frame(resumo, bg=COR_CARTAO, highlightthickness=1, highlightbackground=COR_BORDA, padx=12, pady=10)
+        self.t_resumo.tag_configure("k", foreground=C["muda"], font=("Segoe UI Semibold", 8))
+        est = tk.Frame(resumo, bg=C["cartao"], highlightthickness=1, highlightbackground=C["borda"], padx=14, pady=12)
         est.pack(fill="x", pady=(8, 0))
-        tk.Label(est, text="ESTIMATIVA", font=("Segoe UI Semibold", 8), fg=COR_MUDA, bg=COR_CARTAO).grid(
+        tk.Label(est, text="ESTIMATIVA", font=("Segoe UI Semibold", 8), fg=C["muda"], bg=C["cartao"]).grid(
             row=0, column=0, columnspan=2, sticky="w", pady=(0, 4))
         self.l_consultas = self._metrica(est, "Consultas ao site", 1)
         self.l_tempo = self._metrica(est, "Tempo estimado", 2)
         self.l_arquivos = self._metrica(est, "Arquivos de evidência", 3)
-        self.l_conta = tk.Label(est, font=("Segoe UI", 8), fg=COR_MUDA, bg=COR_CARTAO, wraplength=230,
+        self.l_conta = tk.Label(est, font=("Segoe UI", 8), fg=C["muda"], bg=C["cartao"], wraplength=230,
                                 justify="left")
         self.l_conta.grid(row=4, column=0, columnspan=2, sticky="w", pady=(6, 0))
 
@@ -513,11 +645,13 @@ class Janela(tk.Tk):
         self.b_avancar.pack(side="right")
         self.b_voltar = ttk.Button(rodape, text="←  Voltar", command=lambda: self.ir(self.passo - 1), width=12)
         self.b_voltar.pack(side="right", padx=8)
+        ttk.Label(rodape, text="Ctrl+Enter avança · Alt+← volta · Ctrl+1…6 vai ao passo", style="Muda.TLabel").pack(
+            side="right", padx=16)
 
     def _metrica(self, pai, rotulo, linha):
-        tk.Label(pai, text=rotulo, font=FONTE_P, fg=COR_MUDA, bg=COR_CARTAO).grid(row=linha, column=0, sticky="w",
-                                                                                pady=1)
-        v = tk.Label(pai, font=("Segoe UI Semibold", 12), bg=COR_CARTAO)
+        tk.Label(pai, text=rotulo, font=FONTE_P, fg=C["muda"], bg=C["cartao"]).grid(row=linha, column=0, sticky="w",
+                                                                                  pady=1)
+        v = tk.Label(pai, font=("Segoe UI Semibold", 12), bg=C["cartao"], fg=C["texto"])
         v.grid(row=linha, column=1, sticky="e", padx=(16, 0))
         pai.columnconfigure(1, weight=1)
         return v
@@ -552,6 +686,8 @@ class Janela(tk.Tk):
         self.b_voltar.state(["!disabled"] if i > 0 else ["disabled"])
         self.b_avancar.config(text="✓  Gerar pedido" if i == len(PASSOS) - 1 else "Avançar  →")
         self.l_passo.config(text=f"Passo {i + 1} de {len(PASSOS)}")
+        self.progresso_passos["value"] = i + 1
+        self.rolagem.topo()
         self.atualizar()
 
     def avancar(self):
@@ -635,23 +771,27 @@ class Janela(tk.Tk):
         grade.pack(fill="x")
         for i, dados in enumerate(BASES):
             b = dados.nacional
-            card = tk.Frame(grade, bd=0, highlightthickness=1, cursor="hand2", padx=14, pady=8, bg="white")
+            card = tk.Frame(grade, bd=0, highlightthickness=1, cursor="hand2", padx=16, pady=10, bg=C["cartao"])
             card.grid(row=i // 2, column=i % 2, sticky="nsew", padx=(0, 12), pady=(0, 10))
             grade.columnconfigure(i % 2, weight=1)
             per = f"{b.periodos[0]} a {b.periodos[-1]}  ({len(b.periodos)} {'meses' if b.mensal else 'anos'})"
-            linhas = [(b.nome, ("Segoe UI Semibold", 11), "black"),
-                      (b.descricao, FONTE_P, COR_MUDA),
-                      (f"Período: {per}", FONTE_P, "black"),
+            ativo = dados.chave == self.v_base.get()
+            linhas = [(("✓  " if ativo else "") + b.nome, ("Segoe UI Semibold", 11), C["acento"] if ativo else C["texto"]),
+                      (b.descricao, FONTE_P, C["muda"]),
+                      (f"Período: {per}", FONTE_P, C["texto"]),
                       (f"{len(b.conteudos)} conteúdos  ·  {len(b.filtros) + len(dados.so_estadual)} filtros "
-                       f"({len(dados.so_estadual)} só por estado)", FONTE_P, "black")]
+                       f"({len(dados.so_estadual)} só por estado)", FONTE_P, C["texto"])]
             widgets = [card]
             for txt, fonte, cor in linhas:
-                lb = tk.Label(card, text=txt, font=fonte, fg=cor, bg="white", anchor="w", justify="left",
+                lb = tk.Label(card, text=txt, font=fonte, fg=cor, bg=C["cartao"], anchor="w", justify="left",
                               wraplength=300)
                 lb.pack(anchor="w", fill="x")
                 widgets.append(lb)
-            ativo = dados.chave == self.v_base.get()
-            card.config(highlightbackground=COR_ACENTO if ativo else "#d0d0cc", highlightthickness=2 if ativo else 1)
+            card.config(highlightbackground=C["acento"] if ativo else C["borda"], highlightthickness=2 if ativo else 1)
+            if not ativo:
+                for w in widgets:
+                    w.bind("<Enter>", lambda e, c=card: c.config(highlightbackground=C["borda_forte"]))
+                    w.bind("<Leave>", lambda e, c=card: c.config(highlightbackground=C["borda"]))
             for w in widgets:
                 w.bind("<Button-1>", lambda e, k=dados.chave: (self.escolher_base(k), self.ir(0)))
                 w.bind("<Double-Button-1>", lambda e, k=dados.chave: (self.escolher_base(k), self.ir(1)))
@@ -1030,10 +1170,10 @@ class Janela(tk.Tk):
                           "sem resultado aparece como SR.", style="Muda.TLabel").grid(row=2, column=0, sticky="w")
 
         ttk.Label(f, text="Resumo", style="Sub.TLabel").grid(row=3, column=0, sticky="w", pady=(12, 0))
-        t = tk.Text(f, wrap="word", font=FONTE, relief="flat", padx=14, pady=10, height=9, bg=COR_CARTAO,
-                    highlightthickness=1, highlightbackground=COR_BORDA)
+        t = tk.Text(f, wrap="word", font=FONTE, relief="flat", padx=14, pady=10, height=9, bg=C["cartao"], fg=C["texto"],
+                    highlightthickness=1, highlightbackground=C["borda"])
         t.grid(row=4, column=0, sticky="nsew", pady=(4, 0))
-        t.tag_configure("k", foreground=COR_MUDA, font=("Segoe UI Semibold", 9))
+        t.tag_configure("k", foreground=C["muda"], font=("Segoe UI Semibold", 9))
         t.tag_configure("h", font=("Segoe UI Semibold", 11))
         self._escrever_resumo(t, completo=True)
         avisos = self._avisos()
@@ -1328,16 +1468,26 @@ class Janela(tk.Tk):
         resumos = self._resumo_passos()
         for i, (lbl, sub_, num) in enumerate(zip(self.rot_passos, self.sub_passos, self.num_passos)):
             atual, feito = i == self.passo, i < self.passo
-            lbl.config(fg=COR_ACENTO if atual else ("black" if feito else COR_MUDA),
+            lbl.config(fg=C["acento"] if atual else (C["texto"] if feito else C["muda"]),
                        font=("Segoe UI Semibold", 10) if atual else FONTE)
-            num.config(text="✓" if feito else str(i + 1), bg=COR_ACENTO if atual else ("#c9d7ea" if feito else "#dfe3e8"),
-                       fg="white" if atual else "black")
+            num.config(text="✓" if feito else str(i + 1), bg=C["acento"] if atual else (C["num_feito"] if feito else C["num"]),
+                       fg=C["acento_texto"] if atual else C["texto"])
+            self.barras_passos[i].config(bg=C["acento"] if atual else C["lado"])
             sub_.config(text=resumos[i])
         self.t_resumo.config(state="normal")
         self.t_resumo.delete("1.0", "end")
         self._escrever_resumo(self.t_resumo)
         self.t_resumo.config(state="disabled")
 
+        if self._agendado_est:
+            self.after_cancel(self._agendado_est)
+        self._agendado_est = self.after(120, self._atualizar_estimativa)
+        self._previa()
+
+    def _atualizar_estimativa(self):
+        self._agendado_est = None
+        if not self.winfo_exists():
+            return
         n, partes = self.contar_consultas()
         seg = n * SEGUNDOS_POR_CONSULTA
         self.l_consultas.config(text=fmt(n))
@@ -1379,11 +1529,9 @@ class Janela(tk.Tk):
             return
         fila.iniciar_executor()
         n, _ = self.contar_consultas()
-        frente = "Ela começa agora." if posicao == 1 else f"Antes dela há {posicao - 1} coleta(s) na fila."
-        messagebox.showinfo("Pedido na fila", f"\"{pedido['nome']}\" entrou na fila de coletas: {fmt(n)} consultas "
-                                              f"(cerca de {self.l_tempo.cget('text')}).\n\n{frente} As coletas rodam "
-                                              "uma de cada vez, numa janela própria.\n\nAcompanhe em \"Minhas "
-                                              "coletas\".", parent=self)
+        frente = "começa agora" if posicao == 1 else f"{posicao}º da fila"
+        self.toast(f"✓  \"{pedido['nome']}\" entrou na fila ({frente}): {fmt(n)} consultas, "
+                   f"cerca de {self.l_tempo.cget('text')}.", "ok", 5000)
         self.abrir_coletas()
 
     def abrir_coletas(self):
@@ -1394,6 +1542,9 @@ class Janela(tk.Tk):
 
     def _atualizar_coleta_atual(self):
         if not self.winfo_exists():
+            return
+        if self.v_tema.get() == "auto" and tema.tema_do_windows() != self.tema_resolvido:
+            self._trocar_tema()
             return
         try:
             lista = fila.listar()
@@ -1423,8 +1574,10 @@ class JanelaColetas(tk.Toplevel):
     def __init__(self, pai):
         super().__init__(pai)
         self.title("Minhas coletas")
-        self.geometry("980x560")
-        self.configure(bg=COR_FUNDO)
+        self.geometry("1000x580")
+        tema.barra_de_titulo(self, tema.atual == "escuro")
+        self.bind("<Escape>", lambda e: self.destroy())
+        self.configure(bg=C["fundo"])
         quadro = ttk.Frame(self, padding=16)
         quadro.pack(fill="both", expand=True)
         quadro.columnconfigure(0, weight=1)
@@ -1443,8 +1596,8 @@ class JanelaColetas(tk.Toplevel):
         self.tv.grid(row=2, column=0, sticky="nsew")
         self.tv.bind("<<TreeviewSelect>>", lambda e: self._detalhe())
         self.tv.bind("<Double-Button-1>", lambda e: self._abrir("planilha"))
-        self.tv.tag_configure("andamento", foreground=COR_ACENTO)
-        self.tv.tag_configure("erro", foreground=COR_ERRO)
+        self.tv.tag_configure("andamento", foreground=C["acento"])
+        self.tv.tag_configure("erro", foreground=C["erro"])
 
         det = ttk.Frame(quadro)
         det.grid(row=3, column=0, sticky="ew", pady=(10, 0))
@@ -1617,6 +1770,8 @@ def abrir():
         try:
             import ctypes
             ctypes.windll.shcore.SetProcessDpiAwareness(1)  # texto nítido em telas com escala
+            # identidade própria na barra de tarefas (mostra o ícone do programa, não o do Python)
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("datasus.extrator")
         except Exception:
             pass
     try:
