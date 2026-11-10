@@ -39,6 +39,7 @@ Os estados também são consultados pelo formulário nacional (por UF e por Regi
 | `*.bat` | Atalhos de duplo clique para Windows (parar/exportar, continuar, abrir progresso). |
 | `tests/` | Testes unitários (pytest), sem acesso ao site. |
 | `docs/` | Guia para interromper a coleta e continuar em outro computador. |
+| `interface/` | Protótipo da janela de pedido (escolher base, período, filtros e layout da planilha), leitura das opções dos formulários do TabNet e as verificações contra o site. |
 
 ## Requisitos
 
@@ -84,6 +85,35 @@ Conferência independente de uma entrega:
 
 ```bash
 python conferir_evidencias.py "ENTREGA - FA INTERNAÇÕES DATASUS"
+```
+
+## Janela de pedido (protótipo)
+
+Uma janela para montar o pedido em qualquer uma das quatro bases (internações, mortalidade, nascidos vivos e produção ambulatorial), no Brasil inteiro ou dentro de estados, com as opções reais do site. Ainda não consulta o site: gera o arquivo de pedido e um modelo da planilha em Excel.
+
+```bash
+python interface/janela_pedido.py
+```
+
+Os seis passos:
+
+1. **Base de dados** e abrangência (Brasil inteiro ou estados escolhidos).
+2. **O que contar**, a linha da planilha e quebras em colunas.
+3. **Período**: cada período separado, ou grupos somados (trimestre, ano).
+4. **Filtros**: em cada campo, marque as opções e escolha se cada uma vira um resultado separado ou se entram somadas num grupo. Com 2 ou mais itens, o campo vira um bloco de colunas na planilha (ex.: SEXO, IDADE, RAÇA).
+5. **Saída**: formato da planilha, evidências e conferências.
+6. **Revisar**: prévia da planilha e resumo.
+
+Sem resultado aparece sempre como `SR`: linha zerada (nunca ocultada), "Nenhum registro selecionado", `-` e `...`.
+
+As opções vêm de `interface/opcoes_formularios.json`. Para atualizar a partir do site e conferir se a janela continua igual ao site:
+
+```bash
+python interface/ler_formularios.py
+```
+
+```bash
+python interface/verificar_formularios.py
 ```
 
 ## Garantias de robustez
