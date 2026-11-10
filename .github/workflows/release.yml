@@ -102,7 +102,7 @@ jobs:
           pip install -r requirements-build.txt
           python empacotamento/gerar_exe.py --saida dist
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: notas
 
