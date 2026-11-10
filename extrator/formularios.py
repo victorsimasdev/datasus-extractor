@@ -15,7 +15,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 ARQUIVO_OPCOES = Path(__file__).resolve().parent / "opcoes_formularios.json"
-URL = "http://tabnet.datasus.gov.br/cgi"
+URL = "https://tabnet.datasus.gov.br/cgi"
 TODAS = "TODAS_AS_CATEGORIAS__"
 NAO_ATIVA = "--Não-Ativa--"
 UFS = {"ac": "Acre", "al": "Alagoas", "am": "Amazonas", "ap": "Amapá", "ba": "Bahia", "ce": "Ceará",
