@@ -18,13 +18,13 @@ Uso:
   python coletar_perfil.py          -> tudo, em evidencias_perfil/
 Se for interrompido, rodar de novo continua de onde parou (chaves "{uf}|AAAA-MM|{processo}|{categoria}").
 """
-import json
 import sys
 from pathlib import Path
 
 from playwright.sync_api import sync_playwright
 
 from coletar_datasus import ABA, MESES, PASTA_NACIONAL, ROTULO_MES, UFS, Coletor
+from comum import DadosCorrompidos, gravar_json, ler_json
 
 PASTA = Path(__file__).resolve().parent
 
@@ -72,13 +72,14 @@ def main():
     demo = "--demo" in sys.argv
     pasta_evid = PASTA / ("evidencias_perfil_demo" if demo else "evidencias_perfil")
     arq_dados = PASTA / ("dados_perfil_demo.json" if demo else "dados_perfil.json")
-    dados = json.loads(arq_dados.read_text(encoding="utf-8")) if arq_dados.exists() else {}
+    try:
+        dados = ler_json(arq_dados, {})
+    except DadosCorrompidos as e:
+        sys.exit(f"ERRO: {e}. Restaure a cópia de segurança antes de continuar.")
     casos = (CASOS_DEMO + NACIONAL_DEMO) if demo else (todos_casos() + todos_nacionais())
 
-    def salvar():  # grava num temporário e troca, para uma interrupção nunca deixar o JSON pela metade
-        tmp = arq_dados.with_suffix(".tmp")
-        tmp.write_text(json.dumps(dados, ensure_ascii=False, indent=1), encoding="utf-8")
-        tmp.replace(arq_dados)
+    def salvar():  # gravação atômica: uma interrupção nunca deixa o JSON pela metade
+        gravar_json(arq_dados, dados)
 
     with sync_playwright() as pw:
         col = Coletor(pw, pasta_evid, conteudos=["Internações"], cabecalho=["Internações"],

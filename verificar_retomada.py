@@ -11,13 +11,13 @@ Uso:
   python verificar_retomada.py             -> só mostra o resultado
   python verificar_retomada.py --corrigir  -> retira do JSON as consultas sem evidência
 """
-import json
 import shutil
 import sys
 from datetime import datetime
 from pathlib import Path
 
 from coletar_perfil import todos_casos, todos_nacionais
+from comum import DadosCorrompidos, gravar_json, ler_json
 
 PASTA = Path(__file__).resolve().parent
 ARQ = PASTA / "dados_perfil.json"
@@ -27,9 +27,9 @@ def main():
     if not ARQ.exists():
         sys.exit("dados_perfil.json não encontrado: a coleta começaria do zero. Confira se a pasta foi copiada inteira.")
     try:
-        dados = json.loads(ARQ.read_text(encoding="utf-8"))
-    except json.JSONDecodeError as e:
-        sys.exit(f"dados_perfil.json corrompido ({e}). Use a cópia do computador anterior.")
+        dados = ler_json(ARQ)
+    except DadosCorrompidos as e:
+        sys.exit(f"{e}. Use a cópia do computador anterior.")
 
     sem_evidencia = []
     for k, r in dados.items():
@@ -52,7 +52,7 @@ def main():
         shutil.copy2(ARQ, backup)
         for k, _ in sem_evidencia:
             del dados[k]
-        ARQ.write_text(json.dumps(dados, ensure_ascii=False, indent=1), encoding="utf-8")
+        gravar_json(ARQ, dados)
         print(f"Retiradas do JSON: {len(sem_evidencia)} (cópia de segurança: {backup.name})")
     elif sem_evidencia:
         print("Rode com --corrigir para que essas consultas sejam feitas de novo.")
