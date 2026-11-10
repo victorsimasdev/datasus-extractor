@@ -106,3 +106,20 @@ def test_pedir_parada_cria_arquivo(tmp_path):
     fila.atualizar(e["id"], situacao=fila.EM_ANDAMENTO)
     Path(e["pasta"]).mkdir(parents=True)
     assert fila.pedir_parada(e["id"]) and Path(e["pasta"], "PARAR").exists()
+
+
+def test_executor_no_exe_roda_o_proprio_programa(monkeypatch, tmp_path):
+    import subprocess
+    import sys
+
+    from extrator import fila
+
+    chamadas = []
+    monkeypatch.setattr(fila, "fila_rodando", lambda: False)
+    monkeypatch.setattr(subprocess, "Popen", lambda args, **kw: chamadas.append((args, kw)))
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.setattr(sys, "executable", str(tmp_path / "ExtratorDATASUS.exe"))
+    assert fila.iniciar_executor() is True
+    args, kw = chamadas[0]
+    assert args == [str(tmp_path / "ExtratorDATASUS.exe"), "fila"]
+    assert kw["cwd"] == tmp_path

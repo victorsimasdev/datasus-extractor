@@ -263,10 +263,14 @@ def iniciar_executor():
     """Abre o executor da fila numa janela própria, se ainda não estiver rodando."""
     if fila_rodando():
         return False
-    raiz = Path(__file__).resolve().parent.parent
-    args = [sys.executable, "-m", "extrator", "fila"]
+    if getattr(sys, "frozen", False):  # executável (.exe): o próprio programa roda a fila, sem console
+        raiz, args = Path(sys.executable).parent, [sys.executable, "fila"]
+        flags = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+    else:
+        raiz, args = Path(__file__).resolve().parent.parent, [sys.executable, "-m", "extrator", "fila"]
+        flags = subprocess.CREATE_NEW_CONSOLE if sys.platform == "win32" else 0
     if sys.platform == "win32":
-        subprocess.Popen(args, cwd=raiz, creationflags=subprocess.CREATE_NEW_CONSOLE)
+        subprocess.Popen(args, cwd=raiz, creationflags=flags)
     else:
         subprocess.Popen(args, cwd=raiz, start_new_session=True)
     return True
