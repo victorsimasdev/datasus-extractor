@@ -1,0 +1,39 @@
+{
+  "nome": "regressao SINASC",
+  "base": "sinasc",
+  "abrangencia": "estadual",
+  "estados": [
+    "rr"
+  ],
+  "linha": "Município",
+  "colunas": [],
+  "conteudos": [
+    "Nascim p/resid.mãe"
+  ],
+  "exibir_linhas_zeradas": true,
+  "sem_resultado": {
+    "valor": "SR",
+    "linha_zerada": true,
+    "nenhum_registro": true,
+    "celula_traco": true,
+    "celula_nao_disponivel": true
+  },
+  "ordenar_pelos_valores": false,
+  "periodos": [
+    {
+      "tipo": "separada",
+      "nome": "2021",
+      "valores": [
+        "2021"
+      ]
+    }
+  ],
+  "filtros": {},
+  "combinar_filtros": "independentes",
+  "saida": {
+    "formato": "por_periodo",
+    "evidencias": "pdf",
+    "conferir_total": true,
+    "conferir_pdf": true
+  }
+}

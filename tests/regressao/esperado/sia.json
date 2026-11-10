@@ -1,0 +1,54 @@
+{
+ "JAN 2022": [
+  [
+   "REGIÃO",
+   "Qtd.aprovada",
+   "Valor aprovado"
+  ],
+  [
+   null,
+   null,
+   null
+  ],
+  [
+   "1 REGIÃO NORTE",
+   16903744,
+   120808280.27
+  ],
+  [
+   "2 REGIÃO NORDESTE",
+   63554504,
+   467392411.47
+  ],
+  [
+   "3 REGIÃO SUDESTE",
+   154231007,
+   825982854.23
+  ],
+  [
+   "4 REGIÃO SUL",
+   49248606,
+   282200403.96
+  ],
+  [
+   "5 REGIÃO CENTRO-OESTE",
+   23545834,
+   141891035.22
+  ],
+  [
+   "0 IGNORADO/EXTERIOR",
+   "SR",
+   "SR"
+  ],
+  [
+   null,
+   null,
+   null
+  ],
+  [
+   "TOTAL",
+   307483695,
+   1838274985.15
+  ]
+ ]
+}

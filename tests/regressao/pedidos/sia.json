@@ -1,0 +1,38 @@
+{
+  "nome": "regressao SIA",
+  "base": "sia",
+  "abrangencia": "nacional",
+  "estados": [],
+  "linha": "Região",
+  "colunas": [],
+  "conteudos": [
+    "Qtd.aprovada",
+    "Valor aprovado"
+  ],
+  "exibir_linhas_zeradas": true,
+  "sem_resultado": {
+    "valor": "SR",
+    "linha_zerada": true,
+    "nenhum_registro": true,
+    "celula_traco": true,
+    "celula_nao_disponivel": true
+  },
+  "ordenar_pelos_valores": false,
+  "periodos": [
+    {
+      "tipo": "separada",
+      "nome": "Jan/2022",
+      "valores": [
+        "Jan/2022"
+      ]
+    }
+  ],
+  "filtros": {},
+  "combinar_filtros": "independentes",
+  "saida": {
+    "formato": "por_periodo",
+    "evidencias": "pdf",
+    "conferir_total": true,
+    "conferir_pdf": true
+  }
+}

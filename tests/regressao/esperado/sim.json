@@ -1,0 +1,84 @@
+{
+ "2021": [
+  [
+   "REGIÃO",
+   "Óbitos p/Residênc",
+   null,
+   "ÓBITOS P/RESIDÊNC",
+   "SEXO",
+   null
+  ],
+  [
+   null,
+   null,
+   null,
+   null,
+   "Masculino",
+   "Feminino"
+  ],
+  [
+   "1 REGIÃO NORTE",
+   121354,
+   null,
+   121354,
+   72396,
+   48873
+  ],
+  [
+   "2 REGIÃO NORDESTE",
+   443872,
+   null,
+   443872,
+   248707,
+   194988
+  ],
+  [
+   "3 REGIÃO SUDESTE",
+   843734,
+   null,
+   843734,
+   456197,
+   387247
+  ],
+  [
+   "4 REGIÃO SUL",
+   290226,
+   null,
+   290226,
+   160455,
+   129673
+  ],
+  [
+   "5 REGIÃO CENTRO-OESTE",
+   133463,
+   null,
+   133463,
+   77595,
+   55835
+  ],
+  [
+   "0 IGNORADO/EXTERIOR",
+   "SR",
+   null,
+   "SR",
+   "SR",
+   "SR"
+  ],
+  [
+   null,
+   null,
+   null,
+   null,
+   null,
+   null
+  ],
+  [
+   "TOTAL",
+   1832649,
+   null,
+   1832649,
+   1015350,
+   816616
+  ]
+ ]
+}
