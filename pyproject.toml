@@ -3,6 +3,8 @@ name = "datasus-extractor"
 version = "2.0.0"
 description = "Coleta automatizada de internações do SIH/SUS no TabNet/DATASUS, com evidências e conferência independente"
 requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
 
 [tool.ruff]
 line-length = 120
