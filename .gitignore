@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.tmp
+venv/
+.venv/
+env/
+
+# Dados coletados (gerados pela coleta; grandes e reproduzíveis)
+dados_*.json
+status_*.json
+*.log
+
+# Evidências (PDF + PNG de cada consulta)
+evidencias/
+evidencias_demo/
+evidencias_perfil/
+evidencias_perfil_demo/
+
+# Planilhas e pastas de entrega
+*.xlsx
+*.xls
+~$*
+ENTREGA*/
+RELATÓRIO DE CONFERÊNCIA.txt
+
+# Sistema / editores
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
