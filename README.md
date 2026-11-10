@@ -43,7 +43,7 @@ Os estados também são consultados pelo formulário nacional (por UF e por Regi
 ## Requisitos
 
 - Windows (os atalhos `.bat` e a prevenção de suspensão são do Windows; a coleta em si também roda em outros sistemas)
-- Python 3.10+
+- Python 3.11+ (exigido pelo Pillow 13)
 - Google Chrome instalado
 
 ```bash

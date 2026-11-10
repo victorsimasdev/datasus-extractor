@@ -2,11 +2,11 @@
 name = "datasus-extractor"
 version = "1.0.0"
 description = "Coleta automatizada de internações do SIH/SUS no TabNet/DATASUS, com evidências e conferência independente"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 
 [tool.ruff]
 line-length = 120
-target-version = "py310"
+target-version = "py311"
 
 [tool.ruff.lint]
 select = ["F", "E9"]
