@@ -26,3 +26,7 @@ Thumbs.db
 desktop.ini
 .vscode/
 .idea/
+
+# executável (empacotamento/gerar_exe.py)
+dist/
+*.spec
