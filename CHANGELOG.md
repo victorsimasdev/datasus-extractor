@@ -19,12 +19,15 @@ Coleta genérica: qualquer pedido montado na interface, em quatro bases do TabNe
 - Temas claro, escuro e "seguir o Windows" (Ctrl+D alterna), com barra de título escura no Windows.
 - Ícone do programa na janela e na barra de tarefas, e atalhos de teclado para os passos e as coletas.
 - Só uma janela do programa aberta por vez.
-- Licença MIT, política de segurança e releases automáticas a cada merge na main.
+- Executável do Windows (`ExtratorDATASUS.exe`) com `LEIA-ME.txt`, para usar sem instalar Python.
+- A coleta usa o Microsoft Edge quando o Google Chrome não está instalado.
+- Licença MIT, política de segurança e releases automáticas a cada merge na main, com o executável anexado.
 
 ### Alterado
 - SR passa a valer também para `-` (zero) e `...` (dado não disponível); linhas zeradas são sempre exibidas.
 - A coleta usa https.
 - A janela abre centralizada e lembra o tamanho e o tema.
+- Dependências: pypdf 7.0.0 e pywebview 6.2.1.
 
 ### Removido
 - Scripts da coleta fixa (rodada 1 e por perfil), atalhos `.bat`, envio ao Drive, migração entre computadores e janela de progresso antiga: o pacote faz o mesmo de forma genérica.
