@@ -8,13 +8,28 @@ existem no formulário de cada estado (município, região de saúde...) ficam s
 import html
 import json
 import re
+import sys
 import time
 import unicodedata
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-ARQUIVO_OPCOES = Path(__file__).resolve().parent / "opcoes_formularios.json"
+OPCOES_EMBUTIDAS = Path(__file__).resolve().parent / "opcoes_formularios.json"
+
+
+def _copia_do_usuario():
+    """No executável (.exe) o pacote roda numa pasta temporária: as opções relidas no site ficam na pasta do
+    programa (~/.datasus-extractor), que sobrevive entre as aberturas."""
+    if not getattr(sys, "frozen", False):
+        return None
+    from .fila import pasta_app
+
+    return pasta_app() / "opcoes_formularios.json"
+
+
+_COPIA = _copia_do_usuario()
+ARQUIVO_OPCOES = _COPIA if _COPIA and _COPIA.is_file() else OPCOES_EMBUTIDAS
 URL = "https://tabnet.datasus.gov.br/cgi"
 TODAS = "TODAS_AS_CATEGORIAS__"
 NAO_ATIVA = "--Não-Ativa--"
@@ -76,9 +91,14 @@ def ler_formulario(caminho_def, tentativas=5):
     return campos
 
 
-def atualizar_opcoes(destino=ARQUIVO_OPCOES):
+def atualizar_opcoes(destino=None):
     """Lê no site os formulários nacional e dos 27 estados de cada base e grava o JSON de opções."""
+    global ARQUIVO_OPCOES, _cache
     from .comum import gravar_json
+
+    padrao = destino is None
+    if padrao:
+        destino = _COPIA or OPCOES_EMBUTIDAS
 
     saida = {}
     with ThreadPoolExecutor(4) as ex:
@@ -102,6 +122,8 @@ def atualizar_opcoes(destino=ARQUIVO_OPCOES):
                         "estadual": {"def": d_uf, "ordem": ordem, "comuns": comuns, "por_uf": por_uf}}
             print(f"{k}: nacional {len(nac)} campos | estadual {len(ordem)} campos", flush=True)
     gravar_json(destino, saida)
+    if padrao:
+        ARQUIVO_OPCOES, _cache = Path(destino), None
     return destino
 
 
@@ -109,8 +131,9 @@ def atualizar_opcoes(destino=ARQUIVO_OPCOES):
 _cache = None
 
 
-def carregar_opcoes(caminho=ARQUIVO_OPCOES):
+def carregar_opcoes(caminho=None):
     global _cache
+    caminho = caminho or ARQUIVO_OPCOES
     if _cache is None or caminho != ARQUIVO_OPCOES:
         dados = json.loads(Path(caminho).read_text(encoding="utf-8"))
         if caminho != ARQUIVO_OPCOES:

@@ -186,9 +186,9 @@ class Api:
     def info_opcoes(self):
         from datetime import datetime
 
-        from .formularios import ARQUIVO_OPCOES
+        from . import formularios
 
-        quando = datetime.fromtimestamp(ARQUIVO_OPCOES.stat().st_mtime).strftime("%d/%m/%Y %H:%M")
+        quando = datetime.fromtimestamp(formularios.ARQUIVO_OPCOES.stat().st_mtime).strftime("%d/%m/%Y %H:%M")
         return {"atualizado_em": quando, **self._atualizando}
 
     def atualizar_opcoes(self):
