@@ -152,10 +152,10 @@ function agendarEstimativa() {
 
 // ---------------------------------------------------------------- navegação
 function ir(view) {
+  const trocou = S.view !== view;
   S.view = view;
   document.querySelectorAll(".nav").forEach((b) => b.classList.toggle("ativo", b.dataset.ir === view));
-  render();
-  $("#rolagem").scrollTop = 0;
+  render({ entrando: trocou, topo: true });
 }
 function validar(passo) {
   const p = S.p;
@@ -172,20 +172,28 @@ function irPasso(i) {
     const e = validar(k);
     if (e) { S.passo = k; S.erroPasso = e; render(); return; }
   }
+  const trocou = S.passo !== i;
   S.passo = i; S.erroPasso = "";
-  render();
-  $("#rolagem").scrollTop = 0;
+  render({ entrando: trocou, topo: trocou });
 }
 
 // ---------------------------------------------------------------- render geral
-function render() {
+function render({ entrando = false, topo = false } = {}) {
   const titulos = { painel: "Painel", novo: "Novo pedido", coletas: "Minhas coletas", config: "Configurações" };
   $("#titulo").textContent = titulos[S.view];
   const R = { painel: renderPainel, novo: renderNovo, coletas: renderColetas, config: renderConfig }[S.view];
-  $("#rolagem").innerHTML = `<div class="pagina">${R()}</div>`;
+  const rol = $("#rolagem");
+  const y = rol.scrollTop;
+  // guarda a rolagem das listas internas (opções, registro) para o redesenho não pular
+  const seletorDe = (el) => (el.id ? `#${el.id}` : `.${el.classList[0]}`);
+  const internas = [...rol.querySelectorAll(".lista-opcoes, .log, .campos, .planilha")].map((el) => [seletorDe(el), el.scrollTop]);
+  rol.innerHTML = `<div class="pagina${entrando ? " entrando" : ""}">${R()}</div>`;
+  rol.scrollTop = topo ? 0 : y;
+  const restaurar = () => internas.forEach(([sel, t]) => { const el = rol.querySelector(sel); if (el) el.scrollTop = t; });
   renderTopo();
   renderRodape();
   if (S.view === "novo") { renderTrilho(); renderPrevia(); if (S.passo === 3) renderListaOpcoes("fil"); if (S.passo === 2) renderListaOpcoes("per"); }
+  if (!topo) restaurar();
   if (S.view === "coletas") carregarLog();
   document.querySelectorAll("svg[data-icone]").forEach((s) => { s.outerHTML = icone(s.dataset.icone); });
 }
@@ -566,9 +574,7 @@ function depoisItens(id) {
     for (const [c, its] of Object.entries(S.p.filtros)) if (its.length && !S.p.ordemCampos.includes(c)) S.p.ordemCampos.push(c);
     S.p.ordemCampos = S.p.ordemCampos.filter((c) => S.p.filtros[c]?.length);
   }
-  const y = $("#rolagem").scrollTop;
   render();
-  $("#rolagem").scrollTop = y;
   agendarEstimativa();
 }
 function atalhoPeriodo(tipo) {
@@ -695,9 +701,7 @@ async function atualizarColetas() {
   S.coletas = r.coletas; S.filaRodando = r.fila_rodando;
   renderLado();
   if (JSON.stringify(S.coletas) + S.filaRodando !== antes && (S.view === "painel" || S.view === "coletas")) {
-    const y = $("#rolagem").scrollTop;
     render();
-    $("#rolagem").scrollTop = y;
   } else if (S.view !== "novo") renderTopo();
   carregarLog();
 }

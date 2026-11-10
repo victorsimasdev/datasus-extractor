@@ -89,8 +89,9 @@ button, input, select { font: inherit; color: inherit; }
 .topo h1 { margin: 0; font: 600 18px var(--display); }
 .topo .contexto { font: 12px var(--mono); color: var(--muted); }
 .topo .acoes { margin-left: auto; display: flex; gap: 8px; }
-.rolagem { overflow: auto; flex: 1; min-height: 0; }
-.pagina { padding: 22px 28px 40px; display: grid; gap: 18px; max-width: 1500px; animation: entra .18s ease-out; }
+.rolagem { overflow: auto; flex: 1; min-height: 0; scrollbar-gutter: stable; }
+.pagina { padding: 22px 28px 40px; display: grid; gap: 18px; max-width: 1500px; }
+.pagina.entrando { animation: entra .18s ease-out; } /* só ao trocar de tela, nunca a cada clique */
 @keyframes entra { from { opacity: .4; transform: translateY(4px); } }
 
 /* ---------- componentes ---------- */
@@ -225,9 +226,9 @@ table.tab { width: 100%; border-collapse: collapse; }
 .cartoes-base { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .base {
   text-align: left; border: 1px solid var(--line); background: var(--panel); border-radius: var(--r);
-  padding: 16px; cursor: pointer; display: grid; gap: 6px; transition: border-color .15s, transform .15s;
+  padding: 16px; cursor: pointer; display: grid; gap: 6px; transition: border-color .15s;
 }
-.base:hover { border-color: var(--line-strong); transform: translateY(-1px); }
+.base:hover { border-color: var(--line-strong); }
 .base.sel { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
 .base b { font: 600 15px var(--display); display: flex; align-items: center; gap: 8px; }
 .base .sigla { font: 600 11px var(--mono); color: var(--accent); }
