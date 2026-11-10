@@ -4,8 +4,8 @@ name: Release
 # (release:/tipo!:/BREAKING CHANGE -> X.0.0, feat -> x.Y.0, fix ou requirements.txt -> x.y.Z;
 # o resto não gera versão), cria a tag no commit do merge e publica a release com o zip do
 # Windows (ExtratorDATASUS.exe + LEIA-ME.txt + LICENSE.txt). Nada é gravado na main (protegida):
-# a versão é carimbada no executável na hora de gerá-lo, e as notas vêm da seção "## [X.Y.Z]"
-# do CHANGELOG, se existir, ou dos commits.
+# a versão é carimbada no executável na hora de gerá-lo. A página da release é o modelo fixo
+# .github/modelo-release.md com "O que mudou": os commits desde a tag anterior, por tipo.
 # Regras completas em ferramentas/release.py; o executável em empacotamento/gerar_exe.py.
 
 on:
