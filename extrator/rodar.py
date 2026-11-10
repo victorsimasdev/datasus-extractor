@@ -27,7 +27,21 @@ class Log:
 
 
 def rodar(caminho_pedido, headless=True, limite_horas=72, espera_falha=300):
+    """Executa o pedido. Nunca roda junto com outra coleta: se já houver uma em andamento, recusa
+    (código 3) e sugere a fila."""
+    from .fila import Ocupado, trava, trava_coleta
+
     pedido = carregar(caminho_pedido)
+    try:
+        with trava(trava_coleta(), f"{pedido['nome']} ({coleta.pasta_saida(pedido)})"):
+            return _rodar(pedido, headless, limite_horas, espera_falha)
+    except Ocupado as e:
+        print(f"Já existe uma coleta em andamento: {e}. Só uma coleta roda por vez.\n"
+              f"Para colocar este pedido na fila:  python -m extrator fila adicionar \"{caminho_pedido}\"")
+        return 3
+
+
+def _rodar(pedido, headless, limite_horas, espera_falha):
     plano = planejar(pedido)
     pasta = coleta.pasta_saida(pedido)
     log = Log(pasta / "execucao.log")
@@ -40,8 +54,8 @@ def rodar(caminho_pedido, headless=True, limite_horas=72, espera_falha=300):
         try:
             coleta.coletar(plano, pasta, headless=headless)
             break
-        except KeyboardInterrupt:
-            log("Interrompido pelo usuário. Rode de novo para continuar de onde parou.")
+        except (KeyboardInterrupt, coleta.Interrompida):
+            log("Coleta parada a pedido. Rode de novo (ou coloque na fila) para continuar de onde parou.")
             coleta.status(pasta, fase="interrompido")
             return 130
         except Exception as e:

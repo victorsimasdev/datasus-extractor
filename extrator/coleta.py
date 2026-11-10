@@ -48,6 +48,10 @@ def carregar_dados(pasta):
         raise SystemExit(f"ERRO: {e}. Restaure uma cópia de segurança antes de continuar.") from e
 
 
+class Interrompida(Exception):
+    """A coleta foi parada a pedido (arquivo PARAR na pasta)."""
+
+
 def coletar(plano, pasta, headless=True, limite=None):
     """Executa as consultas que faltam. Devolve (feitas agora, total)."""
     from playwright.sync_api import sync_playwright
@@ -66,6 +70,8 @@ def coletar(plano, pasta, headless=True, limite=None):
     status(pasta, fase="coleta", feitas=total - len(pendentes) if limite is None else len(dados), total=total)
     if not pendentes:
         return 0, total
+    if (pasta / "PARAR").exists():
+        (pasta / "PARAR").unlink()  # pedido de parada antigo: não vale para esta execução
     impedir_suspensao()
     evid = plano.pedido.get("saida", {}).get("evidencias", "pdf_png")
     feitas = 0
@@ -73,6 +79,9 @@ def coletar(plano, pasta, headless=True, limite=None):
         col = Coletor(pw, pasta, evidencias=evid, headless=headless)
         try:
             for c in pendentes:
+                if (pasta / "PARAR").exists():  # pedido de parada: termina aqui, com tudo salvo
+                    (pasta / "PARAR").unlink()
+                    raise Interrompida("parada pedida pelo usuário")
                 n = len(dados) + 1
                 print(f"[{n}/{total}] {c.aba} | {c.uf or 'Brasil'} | {c.linha_tipo} | {c.chave.split('|')[3]}",
                       flush=True)

@@ -5,6 +5,9 @@ Uso:
   python -m extrator planilha PASTA           monta de novo a planilha a partir de uma coleta
   python -m extrator conferir PLANILHA.xlsx   conferência independente pelos PDFs
   python -m extrator atualizar-opcoes         relê no site as opções dos formulários
+  python -m extrator fila                     executa a fila de coletas (uma por vez)
+  python -m extrator fila adicionar PEDIDO    coloca um pedido no fim da fila e inicia o executor
+  python -m extrator coletas                  mostra o histórico de coletas e o progresso
 """
 import argparse
 import sys
@@ -23,6 +26,10 @@ def main(argv=None):
     c.add_argument("planilha")
     sub.add_parser("atualizar-opcoes", help="relê no site as opções dos formulários")
     sub.add_parser("janela", help="abre a janela de pedido")
+    f = sub.add_parser("fila", help="executa a fila de coletas, ou adiciona um pedido a ela")
+    f.add_argument("acao", nargs="?", choices=["adicionar"])
+    f.add_argument("pedido", nargs="?")
+    sub.add_parser("coletas", help="histórico de coletas e progresso")
     a = p.parse_args(argv)
 
     if a.comando in (None, "janela"):
@@ -42,6 +49,32 @@ def main(argv=None):
         from .conferencia import conferir
 
         return 1 if conferir(a.planilha) else 0
+    if a.comando == "fila":
+        from . import fila
+
+        if a.acao == "adicionar":
+            if not a.pedido:
+                p.error("informe o arquivo do pedido")
+            try:
+                e, pos = fila.adicionar(a.pedido)
+            except fila.JaNaFila as ex:
+                print(f"Não adicionado: {ex}.")
+                return 1
+            print(f"Na fila: {e['nome']} (posição {pos}).")
+            if fila.iniciar_executor():
+                print("Executor da fila iniciado numa janela própria.")
+            return 0
+        return fila.executar_fila()
+    if a.comando == "coletas":
+        from . import fila
+
+        for e in fila.listar():
+            st = fila.progresso(e)
+            prog = f"{st.get('feitas', 0)}/{st.get('total', '?')}" if st.get("total") else ""
+            print(f"{e['situacao']:13s} {prog:>9s}  {e['nome']}  ({e['pasta']})")
+        dono = fila.coleta_em_andamento()
+        print(f"Em andamento agora: {dono['descricao']}" if dono else "Nenhuma coleta em andamento.")
+        return 0
     if a.comando == "atualizar-opcoes":
         from .formularios import atualizar_opcoes
 
