@@ -1,3 +1,6 @@
+# A versão não depende do prefixo: o workflow de release sobe o último número para qualquer
+# commit que mude o requirements.txt (dependências do programa). requirements-dev.txt e as
+# actions do GitHub não geram release.
 version: 2
 updates:
   - package-ecosystem: pip
@@ -6,6 +9,7 @@ updates:
       interval: monthly
     commit-message:
       prefix: chore
+      include: scope
     open-pull-requests-limit: 5
   - package-ecosystem: github-actions
     directory: /
@@ -13,3 +17,4 @@ updates:
       interval: monthly
     commit-message:
       prefix: ci
+      include: scope
