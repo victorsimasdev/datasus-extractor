@@ -17,7 +17,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-from coletar_perfil import chave, todos_casos, todos_nacionais
+from coletar_perfil import todos_casos, todos_nacionais
 
 PASTA = Path(__file__).resolve().parent
 ARQ = PASTA / "dados_perfil.json"

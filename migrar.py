@@ -15,7 +15,6 @@ Leva a coleta por perfil de um computador para outro sem perder nada.
 Uso direto:  python migrar.py exportar [--teste DESTINO]   |   python migrar.py continuar [--teste]
   --teste: não para nem inicia processos (só para testar a cópia e as conferências).
 """
-import json
 import os
 import shutil
 import subprocess

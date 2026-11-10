@@ -4,7 +4,7 @@ e compara com cada célula da planilha entregue.
 
 Uso:  python conferir_evidencias.py "ENTREGA - FA INTERNAÇÕES DATASUS"
 """
-import re, sys, unicodedata
+import sys, unicodedata
 from pathlib import Path
 import openpyxl, pypdf
 
