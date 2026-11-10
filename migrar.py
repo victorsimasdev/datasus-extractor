@@ -5,7 +5,7 @@ Leva a coleta por perfil de um computador para outro sem perder nada.
   "1 - PARAR E EXPORTAR.bat"   (computador atual)
       -> pergunta a pasta de destino (pendrive, HD externo...),
          para a coleta, o envio ao Drive e o Chrome da coleta,
-         confere os dados, copia a pasta inteira e confere a cópia arquivo a arquivo.
+         confere os dados, copia a pasta inteira e confere a cópia arquivo a arquivo (SHA-256).
 
   "2 - CONTINUAR AQUI.bat"     (computador novo, dentro da pasta copiada)
       -> (o .bat instala Python, bibliotecas e Chrome se faltarem)
@@ -22,6 +22,8 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
+
+from comum import copia_identica
 
 PASTA = Path(__file__).resolve().parent
 ARQ = PASTA / "dados_perfil.json"
@@ -75,14 +77,14 @@ def copiar_conferindo(origem, destino):
     print(f"Copiando {len(arquivos)} arquivos ({total_mb:,.0f} MB) para {destino} ...")
     for i, p in enumerate(arquivos, start=1):
         alvo = destino / p.relative_to(origem)
-        if not alvo.is_file() or alvo.stat().st_size != p.stat().st_size:
+        if not copia_identica(p, alvo):
             alvo.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(p, alvo)
         if i % 200 == 0 or i == len(arquivos):
             print(f"  {i}/{len(arquivos)}")
+    print("Conferindo a cópia pelo conteúdo (SHA-256)...")
     erradas = [str(p.relative_to(origem)) for p in arquivos
-               if not (destino / p.relative_to(origem)).is_file()
-               or (destino / p.relative_to(origem)).stat().st_size != p.stat().st_size]
+               if not copia_identica(p, destino / p.relative_to(origem))]
     return len(arquivos), erradas
 
 

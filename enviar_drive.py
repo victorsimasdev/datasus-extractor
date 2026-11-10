@@ -4,7 +4,7 @@ do Google Drive "FA INTERNAÇÕES - DATASUS (Jul-2025 a Ago-2026)", através do
 Google Drive para Desktop, que sincroniza com a nuvem sozinho.
 
 Espera (sem limite) até: a execução noturna terminar E o Google Drive para Desktop
-estar disponível. Depois copia e confere arquivo a arquivo (tamanho).
+estar disponível. Depois copia e confere arquivo a arquivo (tamanho e SHA-256).
 Grava status_drive.json.
 
 Uso:  python enviar_drive.py            -> entrega da rodada B-E (rodar_noite.py)
@@ -19,7 +19,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-from comum import DadosCorrompidos, gravar_json, impedir_suspensao, ler_json
+from comum import DadosCorrompidos, copia_identica, gravar_json, impedir_suspensao, ler_json
 
 PASTA = Path(__file__).resolve().parent
 PERFIL = "--perfil" in sys.argv
@@ -79,14 +79,14 @@ def main():
         alvo = destino / p.relative_to(ENTREGA)
         alvo.parent.mkdir(parents=True, exist_ok=True)
         for tentativa in range(5):
+            if copia_identica(p, alvo):  # já está lá (ex.: envio retomado) ou a cópia deu certo
+                break
             try:
                 shutil.copy2(p, alvo)
-                break
             except OSError:
                 time.sleep(10)
     diferentes = [str(p.relative_to(ENTREGA)) for p in origem
-                  if not (destino / p.relative_to(ENTREGA)).is_file()
-                  or (destino / p.relative_to(ENTREGA)).stat().st_size != p.stat().st_size]
+                  if not copia_identica(p, destino / p.relative_to(ENTREGA))]
     status(fase="concluido" if not diferentes else "erro", destino=str(destino),
            arquivos=len(origem), com_problema=diferentes)
 
