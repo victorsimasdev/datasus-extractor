@@ -61,7 +61,7 @@ let api = null;
 function temaResolvido() { return S.prefs.tema === "auto" ? S.prefs.tema_sistema : S.prefs.tema; }
 function aplicarTema() {
   const t = temaResolvido();
-  document.documentElement.dataset.theme = t === "escuro" ? "dark" : "light";
+  document.documentElement.dataset.theme = { escuro: "dark", rosa: "pink" }[t] || "light";
   document.querySelectorAll("#temas button").forEach((b) => b.classList.toggle("ativo", b.dataset.tema === S.prefs.tema));
   api && api.barra_escura(t === "escuro");
 }
@@ -350,7 +350,7 @@ async function carregarLog() {
 function renderConfig() {
   const o = S.opcoesInfo || {};
   return `<section class="cartao"><header><h2>Aparência</h2></header><div class="corpo bloco">
-      <div class="segmentado">${[["claro", "Claro"], ["escuro", "Escuro"], ["auto", "Seguir o Windows"]].map(([k, t]) => `<button class="${S.prefs.tema === k ? "ativo" : ""}" data-tema="${k}">${t}</button>`).join("")}</div>
+      <div class="segmentado">${[["claro", "Claro"], ["escuro", "Escuro"], ["rosa", "Rosa"], ["auto", "Seguir o Windows"]].map(([k, t]) => `<button class="${S.prefs.tema === k ? "ativo" : ""}" data-tema="${k}">${t}</button>`).join("")}</div>
       <p class="ajuda muted" style="margin:0">Ctrl+D alterna entre claro e escuro.</p></div></section>
     <section class="cartao"><header><h2>Pasta padrão dos pedidos</h2></header><div class="corpo linha-form">
       <input class="entrada mono" id="cfg-pasta" style="flex:1" value="${esc(S.prefs.pasta)}">

@@ -2,6 +2,7 @@
 Temas claro e escuro da janela.
 
 - "auto" segue o tema de aplicativos do Windows; "claro" e "escuro" fixam um deles.
+- "rosa" é só da interface nova (pasta web/); na janela clássica ele vale como "claro".
 - A escolha e o tamanho da janela ficam em preferencias.json, na pasta do aplicativo.
 - As cores dos widgets desenhados à mão (barra lateral, cartões, estimativa) vêm do dicionário C,
   atualizado no lugar quando o tema muda; os widgets ttk seguem o tema Sun Valley (sv-ttk).

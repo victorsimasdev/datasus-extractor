@@ -62,7 +62,7 @@ Ao clicar em **Gerar pedido**, a janela salva `pedido.json` na pasta de saída e
 
 ### Aparência e atalhos
 
-- Tema **claro**, **escuro** ou **seguir o Windows**, no rodapé da barra lateral ou com **Ctrl+D**. A escolha e o tamanho da janela ficam guardados.
+- Tema **claro**, **escuro**, **rosa** ou **seguir o Windows**, no rodapé da barra lateral ou com **Ctrl+D**. A escolha e o tamanho da janela ficam guardados.
 - **Ctrl+N** novo pedido, **Ctrl+Enter** avança, **Alt+←** volta, **Ctrl+1 a 6** vai direto ao passo, **Ctrl+H** abre "Minhas coletas".
 
 ### Fila e histórico
