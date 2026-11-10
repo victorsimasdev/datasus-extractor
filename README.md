@@ -6,6 +6,12 @@ Extrai dados do [TabNet/DATASUS](https://tabnet.datasus.gov.br) a partir de um p
 
 A prioridade é a confiabilidade: nenhum valor da planilha pode divergir do que o site mostra. Cada consulta é conferida antes de ser enviada e depois, no resultado. Ao final, uma conferência independente relê cada valor no PDF.
 
+## Aviso
+
+Projeto independente, **sem vínculo com o DATASUS nem com o Ministério da Saúde**. Os dados vêm do [TabNet](https://datasus.saude.gov.br/informacoes-de-saude-tabnet/), que é público; a fonte oficial continua sendo o site. Confira os números antes de usá-los em trabalhos e publicações — a planilha traz as evidências (PDF/PNG) de cada consulta justamente para isso.
+
+O programa faz uma consulta por vez, com espera entre tentativas. Use com moderação: pedidos muito grandes geram milhares de consultas a um serviço público.
+
 ## Bases disponíveis
 
 | Base | Sistema | Período |
@@ -181,3 +187,7 @@ python ferramentas/verificar_formularios.py
 ## Versão anterior
 
 A coleta fixa de internações por arritmia (rodada de Jul/2025 a Ago/2026) está na tag [`v1.0.0`](https://github.com/victorsimasdev/datasus-extractor/releases/tag/v1.0.0). O mesmo pedido agora se monta na janela; o arquivo `tests/dados/pedido_fa.json` é esse pedido.
+
+## Licença
+
+[MIT](LICENSE). Vulnerabilidades: veja [SECURITY.md](SECURITY.md).
