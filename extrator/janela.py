@@ -1,16 +1,16 @@
 """
-PROTÓTIPO da janela de pedido de dados do TabNet/DATASUS.
+Janela de pedido de dados do TabNet/DATASUS.
 
-Só para avaliar a navegação: não coleta nada. As opções de cada campo são as reais,
-lidas dos formulários do TabNet (nacional e dos 27 estados) por ler_formularios.py e gravadas em
-opcoes_formularios.json.
+O usuário monta o pedido em seis passos, com as opções reais de cada formulário (nacional e dos
+27 estados), lidas do site por `python -m extrator atualizar-opcoes`. Ao gerar o pedido, a janela
+salva pedido.json na pasta de saída e pode iniciar a coleta (python -m extrator rodar).
 
 Comportamento do site (testado): várias opções marcadas no mesmo filtro, ou vários períodos,
 viram UM resultado só, somado; médias e taxas são recalculadas pelo site. Por isso, em cada
 filtro e no período, o usuário monta uma lista de itens: cada item é uma opção sozinha
 (coletada separada) ou um grupo de opções (coletadas juntas, somadas pelo site).
 
-Uso:  python janela_pedido.py
+Uso:  python -m extrator
 """
 import itertools
 import json
@@ -18,12 +18,18 @@ import math
 import os
 import re
 import sys
+import tempfile
 import tkinter as tk
 from pathlib import Path
-from tkinter import filedialog, simpledialog, ttk
+from tkinter import filedialog, messagebox, simpledialog, ttk
 
-PASTA = Path(__file__).resolve().parent
-OPCOES = json.loads((PASTA / "opcoes_formularios.json").read_text(encoding="utf-8"))
+from . import fila
+from .coleta import pasta_saida
+from .comum import gravar_json
+from .formularios import ARQUIVO_OPCOES
+
+PASTA = Path(tempfile.gettempdir())  # onde o modelo de planilha é gravado para abrir no Excel
+OPCOES = json.loads(ARQUIVO_OPCOES.read_text(encoding="utf-8"))
 SEGUNDOS_POR_CONSULTA = 20
 MESES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
 PASSOS = ["Base de dados", "Tabela", "Período", "Filtros", "Saída", "Revisar"]
@@ -379,7 +385,7 @@ class ConstrutorItens(ttk.Frame):
 class Janela(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Novo pedido de dados - DATASUS / TabNet  (protótipo)")
+        self.title("Novo pedido de dados - DATASUS / TabNet")
         self.geometry("1380x920")
         self.minsize(1240, 760)
         estilo = ttk.Style(self)
@@ -460,6 +466,13 @@ class Janela(tk.Tk):
             self.sub_passos.append(sub_)
             self.num_passos.append(num)
 
+        tk.Frame(lado, bg=COR_BORDA, height=1).pack(fill="x", pady=(18, 12))
+        ttk.Button(lado, text="📋  Minhas coletas", command=self.abrir_coletas).pack(anchor="w", fill="x")
+        self.l_coleta_atual = tk.Label(lado, text="", font=("Segoe UI", 8), fg=COR_MUDA, bg=COR_FUNDO_LADO,
+                                       justify="left", wraplength=170, anchor="w")
+        self.l_coleta_atual.pack(anchor="w", fill="x", pady=(6, 0))
+        self.after(500, self._atualizar_coleta_atual)
+
         self.area = ttk.Frame(self, padding=(26, 18, 18, 6))
         self.area.grid(row=0, column=1, sticky="nsew")
         self.area.columnconfigure(0, weight=1)
@@ -529,8 +542,8 @@ class Janela(tk.Tk):
             ("Quer filtrar ou detalhar?", "Opcional. Escolha um campo à esquerda e marque as opções. Com 1 opção, "
              "o pedido inteiro fica limitado a ela. Com 2 ou mais, cada uma vira uma coluna na planilha."),
             ("Como entregar?", "Formato da planilha, evidências e conferências automáticas."),
-            ("Revise o pedido", "Confira o resumo e a prévia da planilha. Nesta versão de demonstração nada é "
-             "consultado no site."),
+            ("Revise o pedido", "Confira o resumo e a prévia da planilha. Ao gerar, o pedido é salvo na pasta de "
+             "saída e a coleta pode começar na hora."),
         ]
         t, a = titulos[i]
         self.l_titulo.config(text=f"{i + 1}. {t}")
@@ -1302,6 +1315,11 @@ class Janela(tk.Tk):
         if self.regioes_aplicaveis() and self.v_regioes.get():
             n *= 2
             partes.append("2 (estados + regiões)")
+        try:  # o número exato vem do próprio plano da coleta
+            from .pedido import planejar
+            n = len(planejar(self.pedido()).consultas)
+        except Exception:
+            pass
         return n, partes
 
     def atualizar(self):
@@ -1338,27 +1356,279 @@ class Janela(tk.Tk):
     def gerar(self):
         if not all(self.validar(p) for p in range(len(PASSOS) - 1)):
             return
-        top = tk.Toplevel(self)
-        top.title("Pedido gerado (protótipo)")
-        top.geometry("680x560")
-        ttk.Label(top, text="Este é o arquivo de pedido que a coleta leria. Nada foi consultado no site.",
-                  padding=12).pack(anchor="w")
-        t = tk.Text(top, font=("Consolas", 9), wrap="none", padx=10, pady=8)
-        t.pack(fill="both", expand=True, padx=12)
-        texto = json.dumps(self.pedido(), ensure_ascii=False, indent=2)
-        t.insert("1.0", texto)
-        bt = ttk.Frame(top, padding=12)
-        bt.pack(fill="x")
-        ttk.Button(bt, text="Copiar", command=lambda: (self.clipboard_clear(), self.clipboard_append(texto))).pack(
-            side="left")
-        ttk.Button(bt, text="Fechar", command=top.destroy).pack(side="right")
+        pedido = self.pedido()
+        pasta = pasta_saida(pedido)
+        arquivo = pasta / "pedido.json"
+        ativo = next((e for e in fila.listar() if e["situacao"] in fila.ATIVOS
+                      and Path(e["pasta"]) == pasta.resolve()), None)
+        if ativo:
+            messagebox.showwarning("Pedido já na fila", f"O pedido \"{pedido['nome']}\" já está {ativo['situacao']}. "
+                                   "Mude o nome do pedido para fazer outro.", parent=self)
+            return
+        if arquivo.exists() and not messagebox.askyesno(
+                "Pedido já existe", f"Já existe um pedido com esse nome em:\n{pasta}\n\nSubstituir? Se a coleta "
+                                    "já tinha começado, ela continua de onde parou nas consultas que não mudaram.",
+                parent=self):
+            return
+        try:
+            pasta.mkdir(parents=True, exist_ok=True)
+            gravar_json(arquivo, pedido)
+            entrada, posicao = fila.adicionar(arquivo)
+        except (OSError, fila.JaNaFila) as e:
+            messagebox.showerror("Não consegui adicionar", str(e), parent=self)
+            return
+        fila.iniciar_executor()
+        n, _ = self.contar_consultas()
+        frente = "Ela começa agora." if posicao == 1 else f"Antes dela há {posicao - 1} coleta(s) na fila."
+        messagebox.showinfo("Pedido na fila", f"\"{pedido['nome']}\" entrou na fila de coletas: {fmt(n)} consultas "
+                                              f"(cerca de {self.l_tempo.cget('text')}).\n\n{frente} As coletas rodam "
+                                              "uma de cada vez, numa janela própria.\n\nAcompanhe em \"Minhas "
+                                              "coletas\".", parent=self)
+        self.abrir_coletas()
+
+    def abrir_coletas(self):
+        if getattr(self, "janela_coletas", None) and self.janela_coletas.winfo_exists():
+            self.janela_coletas.lift()
+            return
+        self.janela_coletas = JanelaColetas(self)
+
+    def _atualizar_coleta_atual(self):
+        if not self.winfo_exists():
+            return
+        try:
+            lista = fila.listar()
+            em = next((e for e in lista if e["situacao"] == fila.EM_ANDAMENTO), None)
+            n_fila = sum(1 for e in lista if e["situacao"] == fila.NA_FILA)
+            if em:
+                st = fila.progresso(em)
+                prog = f" ({st.get('feitas', 0)}/{st.get('total', '?')})" if st.get("total") else ""
+                txt = f"Coletando: {em['nome']}{prog}"
+            else:
+                txt = "Nenhuma coleta em andamento"
+            if n_fila:
+                txt += f"\n{n_fila} na fila"
+            self.l_coleta_atual.config(text=txt)
+        except Exception:
+            pass
+        self.after(3000, self._atualizar_coleta_atual)
 
 
-if __name__ == "__main__":
+class JanelaColetas(tk.Toplevel):
+    """Histórico de coletas: fila, progresso da coleta em andamento e coletas terminadas."""
+
+    COLUNAS = (("situacao", "Situação", 105), ("progresso", "Progresso", 95), ("base", "Base", 150),
+               ("inicio", "Início", 120), ("fim", "Fim", 120))
+    BASES = {"sih": "Internações", "sim": "Mortalidade", "sinasc": "Nascidos vivos", "sia": "Ambulatorial"}
+
+    def __init__(self, pai):
+        super().__init__(pai)
+        self.title("Minhas coletas")
+        self.geometry("980x560")
+        self.configure(bg=COR_FUNDO)
+        quadro = ttk.Frame(self, padding=16)
+        quadro.pack(fill="both", expand=True)
+        quadro.columnconfigure(0, weight=1)
+        quadro.rowconfigure(2, weight=1)
+        ttk.Label(quadro, text="Minhas coletas", style="Titulo.TLabel").grid(row=0, column=0, sticky="w")
+        ttk.Label(quadro, text="As coletas rodam uma de cada vez, na ordem da fila. Cada uma salva o que já "
+                               "consultou: se parar, continua de onde parou.", style="Muda.TLabel").grid(
+            row=1, column=0, sticky="w", pady=(2, 10))
+        self.tv = ttk.Treeview(quadro, columns=[c for c, _, _ in self.COLUNAS], show="tree headings",
+                               selectmode="browse")
+        self.tv.heading("#0", text="Pedido")
+        self.tv.column("#0", width=280)
+        for c, t, w in self.COLUNAS:
+            self.tv.heading(c, text=t)
+            self.tv.column(c, width=w, anchor="center" if c != "base" else "w")
+        self.tv.grid(row=2, column=0, sticky="nsew")
+        self.tv.bind("<<TreeviewSelect>>", lambda e: self._detalhe())
+        self.tv.bind("<Double-Button-1>", lambda e: self._abrir("planilha"))
+        self.tv.tag_configure("andamento", foreground=COR_ACENTO)
+        self.tv.tag_configure("erro", foreground=COR_ERRO)
+
+        det = ttk.Frame(quadro)
+        det.grid(row=3, column=0, sticky="ew", pady=(10, 0))
+        det.columnconfigure(0, weight=1)
+        self.barra = ttk.Progressbar(det, mode="determinate", maximum=100)
+        self.barra.grid(row=0, column=0, sticky="ew")
+        self.l_detalhe = ttk.Label(det, style="Muda.TLabel", wraplength=900, justify="left")
+        self.l_detalhe.grid(row=1, column=0, sticky="w", pady=(4, 0))
+
+        bt = ttk.Frame(quadro)
+        bt.grid(row=4, column=0, sticky="ew", pady=(10, 0))
+        self.botoes = {}
+        for chave, texto, cmd in (("subir", "↑ Subir", lambda: self._mover(-1)),
+                                  ("descer", "↓ Descer", lambda: self._mover(1)),
+                                  ("remover", "Tirar da fila", self._remover),
+                                  ("parar", "■ Parar", self._parar),
+                                  ("continuar", "▶ Continuar", self._continuar)):
+            self.botoes[chave] = ttk.Button(bt, text=texto, command=cmd)
+            self.botoes[chave].pack(side="left", padx=(0, 6))
+        for chave, texto in (("pasta", "Abrir pasta"), ("relatorio", "Relatório"), ("planilha", "Abrir planilha")):
+            self.botoes[chave] = ttk.Button(bt, text=texto, command=lambda k=chave: self._abrir(k))
+            self.botoes[chave].pack(side="right", padx=(6, 0))
+        self.l_fila = ttk.Label(quadro, style="Muda.TLabel")
+        self.l_fila.grid(row=5, column=0, sticky="w", pady=(8, 0))
+        self.b_iniciar = ttk.Button(quadro, text="Iniciar a fila", command=self._iniciar_fila)
+        self.entradas = {}
+        self.atualizar()
+
+    def _ordenadas(self):
+        lista = fila.listar()
+        em = [e for e in lista if e["situacao"] == fila.EM_ANDAMENTO]
+        na = [e for e in lista if e["situacao"] == fila.NA_FILA]
+        fim = sorted((e for e in lista if e["situacao"] not in fila.ATIVOS),
+                     key=lambda e: e.get("fim") or e.get("criado_em") or "", reverse=True)
+        return em + na + fim
+
+    @staticmethod
+    def _data(iso):
+        return iso.replace("T", " ")[:16] if iso else ""
+
+    def atualizar(self):
+        if not self.winfo_exists():
+            return
+        sel = self.tv.selection()
+        self.tv.delete(*self.tv.get_children())
+        self.entradas = {}
+        posicao = 0
+        for e in self._ordenadas():
+            st = fila.progresso(e)
+            if e["situacao"] == fila.NA_FILA:
+                posicao += 1
+                prog = f"{posicao}º da fila"
+            elif st.get("total"):
+                prog = f"{st.get('feitas', 0)}/{st['total']}"
+            else:
+                prog = ""
+            tag = ("andamento",) if e["situacao"] == fila.EM_ANDAMENTO else (("erro",) if e["situacao"] == fila.ERRO else ())
+            self.tv.insert("", "end", iid=e["id"], text=e["nome"], tags=tag,
+                           values=(e["situacao"], prog, self.BASES.get(e.get("base"), e.get("base", "")),
+                                   self._data(e.get("inicio")), self._data(e.get("fim"))))
+            self.entradas[e["id"]] = (e, st)
+        if sel and sel[0] in self.entradas:
+            self.tv.selection_set(sel[0])
+        elif self.entradas and not sel:
+            self.tv.selection_set(next(iter(self.entradas)))
+        n_fila = sum(1 for e, _ in self.entradas.values() if e["situacao"] == fila.NA_FILA)
+        if n_fila and not fila.fila_rodando():
+            self.l_fila.config(text=f"{n_fila} coleta(s) esperando, mas a fila está parada.")
+            self.b_iniciar.grid(row=6, column=0, sticky="w", pady=(4, 0))
+        else:
+            self.l_fila.config(text="Fila em execução." if fila.fila_rodando() else
+                               ("Nenhuma coleta. Monte um pedido e clique em \"Gerar pedido\"." if not self.entradas
+                                else "Fila vazia."))
+            self.b_iniciar.grid_remove()
+        self._detalhe()
+        self._agendado = self.after(2000, self.atualizar)
+
+    def _atual(self):
+        sel = self.tv.selection()
+        return self.entradas.get(sel[0]) if sel else (None, None)
+
+    def _detalhe(self):
+        e, st = self._atual()
+        for b in self.botoes.values():
+            b.state(["disabled"])
+        if not e:
+            self.barra["value"] = 0
+            self.l_detalhe.config(text="")
+            return
+        sit = e["situacao"]
+        total, feitas = st.get("total") or 0, st.get("feitas") or 0
+        self.barra["value"] = 100 * feitas / total if total else (100 if sit == fila.CONCLUIDO else 0)
+        partes = [f"Pasta: {e['pasta']}"]
+        if sit == fila.EM_ANDAMENTO:
+            fase = {"coleta": "consultando o site", "aguardando": "site instável, tentando de novo em instantes",
+                    "planilha": "montando a planilha", "conferencia": "conferindo a planilha com os PDFs"}.get(
+                st.get("fase"), st.get("fase", "começando"))
+            restam = max(0, total - feitas)
+            partes.insert(0, f"{fase.capitalize()}: {feitas} de {total} consultas"
+                             + (f", faltam cerca de {max(1, round(restam * SEGUNDOS_POR_CONSULTA / 60))} min" if restam else ""))
+        elif sit == fila.CONCLUIDO:
+            partes.insert(0, f"Concluída: {st.get('celulas', '?')} células, {st.get('sr', '?')} SR, "
+                             f"{st.get('erros_conferencia', 0)} erros na conferência.")
+        elif sit in (fila.ERRO, fila.INTERROMPIDO):
+            partes.insert(0, f"{sit.capitalize()}: {e.get('mensagem') or st.get('motivo') or 'veja o relatório'}. "
+                             f"Já coletadas: {feitas} de {total}. \"Continuar\" retoma de onde parou.")
+        self.l_detalhe.config(text="  ·  ".join(partes))
+        pode = {"subir": sit == fila.NA_FILA, "descer": sit == fila.NA_FILA, "remover": sit != fila.EM_ANDAMENTO,
+                "parar": sit == fila.EM_ANDAMENTO, "continuar": sit in (fila.ERRO, fila.INTERROMPIDO),
+                "pasta": Path(e["pasta"]).is_dir(), "relatorio": Path(e["pasta"], "RELATÓRIO.txt").is_file(),
+                "planilha": bool(self._planilha(e))}
+        self.botoes["remover"].config(text="Tirar da fila" if sit == fila.NA_FILA else "Tirar do histórico")
+        for k, ok in pode.items():
+            self.botoes[k].state(["!disabled"] if ok else ["disabled"])
+
+    @staticmethod
+    def _planilha(e):
+        p = Path(e["pasta"])
+        return next(iter(sorted(p.glob("*.xlsx"))), None) if p.is_dir() else None
+
+    def _mover(self, delta):
+        e, _ = self._atual()
+        if e and fila.mover(e["id"], delta):
+            self.atualizar_agora()
+
+    def _remover(self):
+        e, _ = self._atual()
+        if not e:
+            return
+        msg = ("Tirar este pedido da fila?" if e["situacao"] == fila.NA_FILA else
+               "Tirar esta coleta do histórico? A pasta, a planilha e as evidências continuam onde estão.")
+        if messagebox.askyesno("Confirmar", msg, parent=self) and fila.remover(e["id"]):
+            self.atualizar_agora()
+
+    def _parar(self):
+        e, _ = self._atual()
+        if e and messagebox.askyesno("Parar a coleta", "Parar esta coleta? Ela termina a consulta atual, salva tudo "
+                                     "e para; dá para continuar depois de onde parou.", parent=self):
+            fila.pedir_parada(e["id"])
+            self.l_detalhe.config(text="Parada pedida: a coleta para ao terminar a consulta atual.")
+
+    def _continuar(self):
+        e, _ = self._atual()
+        if e and fila.reenfileirar(e["id"]):
+            fila.iniciar_executor()
+            self.atualizar_agora()
+
+    def _iniciar_fila(self):
+        fila.iniciar_executor()
+        self.after(1500, self.atualizar_agora)
+
+    def atualizar_agora(self):
+        if getattr(self, "_agendado", None):
+            self.after_cancel(self._agendado)
+        self.atualizar()
+
+    def _abrir(self, o_que):
+        e, _ = self._atual()
+        if not e:
+            return
+        alvo = {"pasta": Path(e["pasta"]), "relatorio": Path(e["pasta"], "RELATÓRIO.txt"),
+                "planilha": self._planilha(e)}[o_que]
+        if alvo and Path(alvo).exists() and sys.platform == "win32":
+            os.startfile(alvo)
+
+
+def abrir():
+    """Abre a janela. Só uma janela do programa por vez: se já houver uma aberta, avisa e sai."""
     if sys.platform == "win32":
         try:
             import ctypes
             ctypes.windll.shcore.SetProcessDpiAwareness(1)  # texto nítido em telas com escala
         except Exception:
             pass
-    Janela().mainloop()
+    try:
+        with fila.trava(fila.pasta_app() / "janela.lock", "janela de pedido"):
+            Janela().mainloop()
+    except fila.Ocupado:
+        raiz = tk.Tk()
+        raiz.withdraw()
+        messagebox.showinfo("Programa já aberto", "O extrator do DATASUS já está aberto em outra janela. "
+                                                   "Use a janela que já está aberta.", parent=raiz)
+        raiz.destroy()
+
+
+if __name__ == "__main__":
+    abrir()

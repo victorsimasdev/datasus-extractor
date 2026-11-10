@@ -1,0 +1,521 @@
+{
+ "nome": "FA - INTERNAÇÕES (exemplo)",
+ "base": "sih",
+ "abrangencia": "nacional",
+ "estados": [],
+ "formulario": "sih/cnv/niuf.def",
+ "linha": "Unidade da Federação",
+ "colunas": [],
+ "conteudos": [
+  "Internações",
+  "Valor médio intern",
+  "Óbitos",
+  "Média permanência"
+ ],
+ "exibir_linhas_zeradas": true,
+ "sem_resultado": {
+  "valor": "SR",
+  "linha_zerada": true,
+  "nenhum_registro": true,
+  "celula_traco": true,
+  "celula_nao_disponivel": true
+ },
+ "ordenar_pelos_valores": false,
+ "periodos": [
+  {
+   "tipo": "separada",
+   "nome": "Jul/2025",
+   "valores": [
+    "Jul/2025"
+   ]
+  },
+  {
+   "tipo": "separada",
+   "nome": "Ago/2025",
+   "valores": [
+    "Ago/2025"
+   ]
+  },
+  {
+   "tipo": "separada",
+   "nome": "Set/2025",
+   "valores": [
+    "Set/2025"
+   ]
+  },
+  {
+   "tipo": "separada",
+   "nome": "Out/2025",
+   "valores": [
+    "Out/2025"
+   ]
+  },
+  {
+   "tipo": "separada",
+   "nome": "Nov/2025",
+   "valores": [
+    "Nov/2025"
+   ]
+  },
+  {
+   "tipo": "separada",
+   "nome": "Dez/2025",
+   "valores": [
+    "Dez/2025"
+   ]
+  },
+  {
+   "tipo": "separada",
+   "nome": "Jan/2026",
+   "valores": [
+    "Jan/2026"
+   ]
+  },
+  {
+   "tipo": "separada",
+   "nome": "Fev/2026",
+   "valores": [
+    "Fev/2026"
+   ]
+  },
+  {
+   "tipo": "separada",
+   "nome": "Mar/2026",
+   "valores": [
+    "Mar/2026"
+   ]
+  },
+  {
+   "tipo": "separada",
+   "nome": "Abr/2026",
+   "valores": [
+    "Abr/2026"
+   ]
+  },
+  {
+   "tipo": "separada",
+   "nome": "Mai/2026",
+   "valores": [
+    "Mai/2026"
+   ]
+  },
+  {
+   "tipo": "separada",
+   "nome": "Jun/2026",
+   "valores": [
+    "Jun/2026"
+   ]
+  },
+  {
+   "tipo": "separada",
+   "nome": "Jul/2026",
+   "valores": [
+    "Jul/2026"
+   ]
+  },
+  {
+   "tipo": "separada",
+   "nome": "Ago/2026",
+   "valores": [
+    "Ago/2026"
+   ]
+  }
+ ],
+ "filtros": {
+  "Unidade da Federação": [
+   {
+    "tipo": "separada",
+    "nome": "Acre",
+    "valores": [
+     "1"
+    ]
+   },
+   {
+    "tipo": "separada",
+    "nome": "Alagoas",
+    "valores": [
+     "2"
+    ]
+   },
+   {
+    "tipo": "separada",
+    "nome": "Amapá",
+    "valores": [
+     "3"
+    ]
+   },
+   {
+    "tipo": "separada",
+    "nome": "Amazonas",
+    "valores": [
+     "4"
+    ]
+   },
+   {
+    "tipo": "separada",
+    "nome": "Bahia",
+    "valores": [
+     "5"
+    ]
+   },
+   {
+    "tipo": "separada",
+    "nome": "Ceará",
+    "valores": [
+     "6"
+    ]
+   },
+   {
+    "tipo": "separada",
+    "nome": "Distrito Federal",
+    "valores": [
+     "7"
+    ]
+   },
+   {
+    "tipo": "separada",
+    "nome": "Espírito Santo",
+    "valores": [
+     "8"
+    ]
+   },
+   {
+    "tipo": "separada",
+    "nome": "Goiás",
+    "valores": [
+     "9"
+    ]
+   },
+   {
+    "tipo": "separada",
+    "nome": "Maranhão",
+    "valores": [
+     "10"
+    ]
+   },
+   {
+    "tipo": "separada",
+    "nome": "Mato Grosso",
+    "valores": [
+     "11"
+    ]
+   },
+   {
+    "tipo": "separada",
+    "nome": "Mato Grosso do Sul",
+    "valores": [
+     "12"
+    ]
+   },
+   {
+    "tipo": "separada",
+    "nome": "Minas Gerais",
+    "valores": [
+     "13"
+    ]
+   },
+   {
+    "tipo": "separada",
+    "nome": "Pará",
+    "valores": [
+     "14"
+    ]
+   },
+   {
+    "tipo": "separada",
+    "nome": "Paraíba",
+    "valores": [
+     "15"
+    ]
+   },
+   {
+    "tipo": "separada",
+    "nome": "Paraná",
+    "valores": [
+     "16"
+    ]
+   },
+   {
+    "tipo": "separada",
+    "nome": "Pernambuco",
+    "valores": [
+     "17"
+    ]
+   },
+   {
+    "tipo": "separada",
+    "nome": "Piauí",
+    "valores": [
+     "18"
+    ]
+   },
+   {
+    "tipo": "separada",
+    "nome": "Rio de Janeiro",
+    "valores": [
+     "19"
+    ]
+   },
+   {
+    "tipo": "separada",
+    "nome": "Rio Grande do Norte",
+    "valores": [
+     "20"
+    ]
+   },
+   {
+    "tipo": "separada",
+    "nome": "Rio Grande do Sul",
+    "valores": [
+     "21"
+    ]
+   },
+   {
+    "tipo": "separada",
+    "nome": "Rondônia",
+    "valores": [
+     "22"
+    ]
+   },
+   {
+    "tipo": "separada",
+    "nome": "Roraima",
+    "valores": [
+     "23"
+    ]
+   },
+   {
+    "tipo": "separada",
+    "nome": "Santa Catarina",
+    "valores": [
+     "24"
+    ]
+   },
+   {
+    "tipo": "separada",
+    "nome": "São Paulo",
+    "valores": [
+     "25"
+    ]
+   },
+   {
+    "tipo": "separada",
+    "nome": "Sergipe",
+    "valores": [
+     "26"
+    ]
+   },
+   {
+    "tipo": "separada",
+    "nome": "Tocantins",
+    "valores": [
+     "27"
+    ]
+   }
+  ],
+  "Lista Morb  CID-10": [
+   {
+    "tipo": "separada",
+    "nome": "Transtornos de condução e arritmias cardíacas",
+    "valores": [
+     "174"
+    ]
+   }
+  ],
+  "Faixa Etária 1": [
+   {
+    "tipo": "separada",
+    "nome": "20 a 29 anos",
+    "valores": [
+     "6"
+    ]
+   },
+   {
+    "tipo": "separada",
+    "nome": "30 a 39 anos",
+    "valores": [
+     "7"
+    ]
+   },
+   {
+    "tipo": "separada",
+    "nome": "40 a 49 anos",
+    "valores": [
+     "8"
+    ]
+   },
+   {
+    "tipo": "separada",
+    "nome": "50 a 59 anos",
+    "valores": [
+     "9"
+    ]
+   },
+   {
+    "tipo": "separada",
+    "nome": "60 a 69 anos",
+    "valores": [
+     "10"
+    ]
+   },
+   {
+    "tipo": "separada",
+    "nome": "70 a 79 anos",
+    "valores": [
+     "11"
+    ]
+   },
+   {
+    "tipo": "separada",
+    "nome": "80 anos e mais",
+    "valores": [
+     "12"
+    ]
+   }
+  ],
+  "Sexo": [
+   {
+    "tipo": "separada",
+    "nome": "Masculino",
+    "valores": [
+     "1"
+    ]
+   },
+   {
+    "tipo": "separada",
+    "nome": "Feminino",
+    "valores": [
+     "2"
+    ]
+   }
+  ],
+  "Cor/raça": [
+   {
+    "tipo": "separada",
+    "nome": "Branca",
+    "valores": [
+     "1"
+    ]
+   },
+   {
+    "tipo": "separada",
+    "nome": "Preta",
+    "valores": [
+     "2"
+    ]
+   },
+   {
+    "tipo": "separada",
+    "nome": "Parda",
+    "valores": [
+     "3"
+    ]
+   },
+   {
+    "tipo": "separada",
+    "nome": "Amarela",
+    "valores": [
+     "4"
+    ]
+   },
+   {
+    "tipo": "separada",
+    "nome": "Indígena",
+    "valores": [
+     "5"
+    ]
+   }
+  ]
+ },
+ "ordem_dos_blocos": [
+  "Sexo",
+  "Faixa Etária 1",
+  "Cor/raça"
+ ],
+ "titulos_dos_blocos": {
+  "Sexo": "SEXO",
+  "Faixa Etária 1": "IDADE",
+  "Cor/raça": "RAÇA"
+ },
+ "combinar_filtros": "independentes",
+ "layout": {
+  "linhas": [
+   "ACRE",
+   "ALAGOAS",
+   "AMAPÁ",
+   "AMAZONAS",
+   "BAHIA",
+   "CEARÁ",
+   "DISTRITO FEDERAL",
+   "ESPÍRITO SANTO",
+   "GOIÁS",
+   "MARANHÃO",
+   "MATO GROSSO",
+   "MATO GROSSO DO SUL",
+   "MINAS GERAIS",
+   "PARÁ",
+   "PARAÍBA",
+   "PARANÁ",
+   "PERNAMBUCO",
+   "PIAUÍ",
+   "RIO DE JANEIRO",
+   "RIO GRANDE DO NORTE",
+   "RIO GRANDE DO SUL",
+   "RONDÔNIA",
+   "RORAIMA",
+   "SANTA CATARINA",
+   "SÃO PAULO",
+   "SERGIPE",
+   "TOCANTINS",
+   "",
+   "BRASIL - TOTAL",
+   "NORTE",
+   "NORDESTE",
+   "CENTRO-OESTE",
+   "SUDESTE",
+   "SUL"
+  ],
+  "conteudos_nos_blocos": [
+   "Internações"
+  ],
+  "blocos": [
+   {
+    "titulo": "SEXO",
+    "colunas": [
+     "Masculino",
+     "Feminino"
+    ]
+   },
+   {
+    "titulo": "IDADE",
+    "colunas": [
+     "20 a 29 anos",
+     "30 a 39 anos",
+     "40 a 49 anos",
+     "50 a 59 anos",
+     "60 a 69 anos",
+     "70 a 79 anos",
+     "80 anos e mais"
+    ]
+   },
+   {
+    "titulo": "RAÇA",
+    "colunas": [
+     "Branca",
+     "Preta",
+     "Parda",
+     "Amarela",
+     "Indígena"
+    ]
+   }
+  ],
+  "brasil_e_regioes": true
+ },
+ "saida": {
+  "formato": "por_periodo",
+  "evidencias": "pdf_png",
+  "conferir_total": true,
+  "conferir_pdf": true,
+  "pasta": "saida"
+ }
+}

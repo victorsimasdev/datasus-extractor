@@ -1,4 +1,4 @@
-"""Testa no site o que acontece quando se marcam várias opções no mesmo campo (protótipo)."""
+"""Testa no site o que acontece quando se marcam várias opções no mesmo campo, ou vários períodos."""
 import html
 import json
 import re
@@ -7,7 +7,7 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-OP = json.loads((Path(__file__).resolve().parent / "opcoes_formularios.json").read_text(encoding="utf-8"))
+OP = json.loads((Path(__file__).resolve().parent.parent / "extrator" / "opcoes_formularios.json").read_text(encoding="utf-8"))
 TODAS = "TODAS_AS_CATEGORIAS__"
 
 

@@ -6,23 +6,19 @@ venv/
 .venv/
 env/
 
-# Dados coletados (gerados pela coleta; grandes e reproduzíveis)
-dados_*.json
-status_*.json
-*.log
-
-# Evidências (PDF + PNG de cada consulta)
+# Saída das coletas (pasta padrão do pedido): dados, evidências, planilhas e relatórios
+saida/
+dados.json
+status.json
+pedido.json
+execucao.log
+RELATÓRIO.txt
 evidencias/
-evidencias_demo/
-evidencias_perfil/
-evidencias_perfil_demo/
 
-# Planilhas e pastas de entrega
+# Planilhas
 *.xlsx
 *.xls
 ~$*
-ENTREGA*/
-RELATÓRIO DE CONFERÊNCIA.txt
 
 # Sistema / editores
 .DS_Store

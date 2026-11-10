@@ -15,8 +15,8 @@ import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import janela_pedido as jp  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from extrator import janela as jp  # noqa: E402
 
 OP = jp.OPCOES
 CONTROLES_CONHECIDOS = {"opcoes", "zeradas", "formato", "mostre", "limpa"}
