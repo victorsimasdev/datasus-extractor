@@ -283,7 +283,7 @@ def gravar(plano, montagem, dados, destino):
 
     ev = wb.create_sheet("EVIDÊNCIAS")
     cab = ["Consulta", "Período", "Estado", "Linhas", "Papel", "Filtros", "Consultado em", "Resultado",
-           "Formulário", "PDF", "PNG", "Print do formulário"]
+           "Formulário", "PDF", "PNG", "Print do formulário", "Períodos no site"]
     for i, t in enumerate(cab, start=1):
         ev.cell(1, i, t).font = negrito
     for r, c in enumerate(plano.consultas, start=2):
@@ -295,13 +295,14 @@ def gravar(plano, montagem, dados, destino):
                                                   f"{len(d['linhas'])} linhas"), c.caminho_def]
         for i, v in enumerate(vals, start=1):
             ev.cell(r, i, v)
+        ev.cell(r, 13, ", ".join(c.periodos))
         for i, k in ((10, "pdf"), (11, "png"), (12, "png_formulario")):
             caminho = (d or {}).get(k)
             if caminho:
                 cel = ev.cell(r, i, Path(caminho).name)
                 cel.hyperlink = caminho.replace("\\", "/")
                 cel.font = Font(color="0563C1", underline="single")
-    for i, larg in enumerate([40, 12, 8, 10, 30, 60, 19, 26, 22, 40, 40, 40], start=1):
+    for i, larg in enumerate([40, 12, 8, 10, 30, 60, 19, 26, 22, 40, 40, 40, 30], start=1):
         ev.column_dimensions[get_column_letter(i)].width = larg
     ev.freeze_panes = "A2"
 
