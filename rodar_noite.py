@@ -9,8 +9,7 @@ Execução sem supervisão (a noite inteira):
 
 Uso:  python rodar_noite.py
 """
-import ctypes
-import json
+import os
 import shutil
 import subprocess
 import sys
@@ -19,12 +18,14 @@ from datetime import datetime
 from pathlib import Path
 
 from coletar_datasus import MESES, UFS
+from comum import DadosCorrompidos, gravar_json, impedir_suspensao, ler_json
 
 PASTA = Path(__file__).resolve().parent
 LOG = PASTA / "execucao.log"
 STATUS = PASTA / "status_execucao.json"
 ENTREGA = PASTA / "ENTREGA - FA INTERNAÇÕES DATASUS"
 LIMITE_HORAS = 12
+ENV = {**os.environ, "PYTHONIOENCODING": "utf-8"}
 
 
 def log(msg):
@@ -36,12 +37,11 @@ def log(msg):
 
 def status(**kw):
     kw["atualizado_em"] = datetime.now().isoformat(timespec="seconds")
-    STATUS.write_text(json.dumps(kw, ensure_ascii=False, indent=1), encoding="utf-8")
+    gravar_json(STATUS, kw)
 
 
 def faltam():
-    arq = PASTA / "dados_coletados.json"
-    dados = json.loads(arq.read_text(encoding="utf-8")) if arq.exists() else {}
+    dados = ler_json(PASTA / "dados_coletados.json", {})
     chaves = [f"{uf}|{a}-{m:02d}" for uf in UFS for a, m in MESES]
     chaves += [f"BR-{l}|{a}-{m:02d}" for a, m in MESES for l in ("Unidade_da_Federação", "Região")]
     return [c for c in chaves if c not in dados], len(chaves)
@@ -51,18 +51,22 @@ def rodar(script, *args):
     with LOG.open("a", encoding="utf-8") as f:
         return subprocess.run([sys.executable, "-u", str(PASTA / script), *args], cwd=PASTA,
                               stdout=f, stderr=subprocess.STDOUT,
-                              env={**__import__("os").environ, "PYTHONIOENCODING": "utf-8"}).returncode
+                              env=ENV).returncode
 
 
 def main():
-    # ES_CONTINUOUS | ES_SYSTEM_REQUIRED: o PC não suspende enquanto este processo estiver vivo
-    ctypes.windll.kernel32.SetThreadExecutionState(0x80000000 | 0x00000001)
+    impedir_suspensao()
     inicio = time.time()
     log("Início da execução noturna")
 
     rodada = 0
     while True:
-        pendentes, total = faltam()
+        try:
+            pendentes, total = faltam()
+        except DadosCorrompidos as e:
+            log(f"ERRO: {e}. Execução interrompida para não sobrescrever a coleta.")
+            status(fase="erro", motivo=str(e))
+            sys.exit(1)
         status(fase="coleta", feitas=total - len(pendentes), total=total)
         if not pendentes:
             break
@@ -83,7 +87,7 @@ def main():
         f.write(f"Gerado em {datetime.now():%d/%m/%Y %H:%M:%S}\n\n")
     saida = subprocess.run([sys.executable, "-u", str(PASTA / "preencher_planilha.py")], cwd=PASTA,
                            capture_output=True, text=True, encoding="utf-8",
-                           env={**__import__("os").environ, "PYTHONIOENCODING": "utf-8"})
+                           env=ENV)
     with relatorio.open("a", encoding="utf-8") as f:
         f.write(saida.stdout + saida.stderr)
     log("Planilha:\n" + saida.stdout + saida.stderr)
