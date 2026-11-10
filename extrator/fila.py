@@ -58,6 +58,25 @@ def pid_vivo(pid):
         return False
 
 
+def inicio_processo(pid):
+    """Momento em que o processo começou (FILETIME do Windows), ou None se não der para saber.
+
+    Distingue o dono de uma trava de outro processo que recebeu o mesmo PID depois: o Windows
+    reaproveita PIDs, e uma trava largada (computador desligado com o programa aberto) com o PID de
+    outro processo vivo pareceria ocupada para sempre."""
+    if sys.platform != "win32" or pid <= 0:
+        return None
+    import ctypes
+
+    h = ctypes.windll.kernel32.OpenProcess(0x1000, False, pid)  # PROCESS_QUERY_LIMITED_INFORMATION
+    if not h:
+        return None
+    tempos = [ctypes.c_ulonglong() for _ in range(4)]  # criação, saída, kernel, usuário
+    ok = ctypes.windll.kernel32.GetProcessTimes(h, *(ctypes.byref(t) for t in tempos))
+    ctypes.windll.kernel32.CloseHandle(h)
+    return tempos[0].value if ok else None
+
+
 class Ocupado(Exception):
     """A trava já está com outro processo vivo."""
 
@@ -72,7 +91,12 @@ def dono_da_trava(caminho):
         info = json.loads(Path(caminho).read_text(encoding="utf-8"))
     except (FileNotFoundError, json.JSONDecodeError, OSError):
         return None
-    return info if pid_vivo(int(info.get("pid", 0))) else None
+    pid = int(info.get("pid", 0))
+    if not pid_vivo(pid):
+        return None
+    if info.get("inicio_processo") is not None and info["inicio_processo"] != inicio_processo(pid):
+        return None  # PID reaproveitado por outro processo
+    return info
 
 
 @contextmanager
@@ -85,7 +109,8 @@ def trava(caminho, descricao="", esperar=0.0):
         try:
             fd = os.open(caminho, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
             with os.fdopen(fd, "w", encoding="utf-8") as f:
-                json.dump({"pid": os.getpid(), "desde": agora(), "descricao": descricao}, f, ensure_ascii=False)
+                json.dump({"pid": os.getpid(), "inicio_processo": inicio_processo(os.getpid()), "desde": agora(),
+                           "descricao": descricao}, f, ensure_ascii=False)
             break
         except FileExistsError:
             dono = dono_da_trava(caminho)
@@ -244,6 +269,8 @@ def executar_fila(rodar=None, saida=print):
                 saida(f"==> {e['nome']}  ({e['pasta']})")
                 try:
                     codigo = rodar(e["pedido"])
+                except SystemExit as ex:  # dados.json corrompido: erro do pedido, não do executor
+                    codigo, msg = 1, str(ex)
                 except Exception as ex:  # o executor nunca para por causa de um pedido
                     codigo, msg = 1, f"{type(ex).__name__}: {ex}"
                 else:

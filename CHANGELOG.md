@@ -9,6 +9,9 @@ O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o 
 
 ### Corrigido
 - Atualização: a troca do executável não depende mais do PATH (um `find.exe` do Git fazia a versão nova abrir antes de a antiga fechar, com o aviso "já está aberto"), e a verificação não falha quando sobra o exe antigo em uso.
+- "Parar" durante a espera depois de uma falha do site era ignorado: a coleta recomeçava e apagava o pedido de parada como antigo.
+- Um `dados.json` corrompido derrubava o executor da fila, deixando o pedido "em andamento" para sempre e travando os próximos. Agora o pedido fica com erro e a fila segue.
+- Trava largada (computador desligado com o programa aberto ou coletando) cujo PID o Windows reaproveitou parecia ocupada: o programa dizia "já está aberto", a fila não andava e a atualização se recusava a instalar.
 
 ## [2.0.0] - 2026-11-10
 

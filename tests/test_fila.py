@@ -124,3 +124,57 @@ def test_executor_no_exe_roda_o_proprio_programa(monkeypatch, tmp_path):
     assert args == [str(tmp_path / "ExtratorDATASUS.exe"), "fila"]
     assert kw["cwd"] == tmp_path
     assert kw["env"]["PYINSTALLER_RESET_ENVIRONMENT"] == "1"
+
+
+def test_trava_com_pid_reaproveitado_por_outro_processo(tmp_path):
+    caminho = tmp_path / "x.lock"
+    # PID vivo (este processo), mas de outro momento: a trava foi largada e o PID reaproveitado
+    caminho.write_text(json.dumps({"pid": os.getpid(), "inicio_processo": 1, "descricao": "antiga"}), encoding="utf-8")
+    assert fila.dono_da_trava(caminho) is None
+    with fila.trava(caminho, "nova"):
+        assert fila.dono_da_trava(caminho)["descricao"] == "nova"
+
+
+def test_trava_antiga_sem_inicio_do_processo_continua_valendo(tmp_path):
+    caminho = tmp_path / "x.lock"
+    caminho.write_text(json.dumps({"pid": os.getpid(), "descricao": "versão anterior"}), encoding="utf-8")
+    assert fila.dono_da_trava(caminho)["descricao"] == "versão anterior"
+
+
+def test_dados_corrompidos_nao_derrubam_o_executor(tmp_path):
+    a, _ = fila.adicionar(pedido(tmp_path, "A"))
+    b, _ = fila.adicionar(pedido(tmp_path, "B"))
+    rodados = []
+
+    def rodar(caminho):
+        rodados.append(Path(caminho).parent.name)
+        if len(rodados) == 1:
+            raise SystemExit("ERRO: dados.json está corrompido. Restaure uma cópia de segurança antes de continuar.")
+        return 0
+
+    assert fila.executar_fila(rodar=rodar, saida=lambda *_: None) == 0
+    sit = {e["id"]: e for e in fila.listar()}
+    assert sit[a["id"]]["situacao"] == fila.ERRO and "corrompido" in sit[a["id"]]["mensagem"]
+    assert sit[b["id"]]["situacao"] == fila.CONCLUIDO and len(rodados) == 2
+
+
+def test_parar_durante_a_espera_depois_de_uma_falha(tmp_path, monkeypatch):
+    from extrator import coleta, rodar
+
+    arq = pedido(tmp_path, "A")
+    pasta = coleta.pasta_saida(json.loads(arq.read_text(encoding="utf-8")))
+
+    def coletar(plano, pasta_, headless=True):
+        Path(pasta_, "PARAR").write_text("agora", encoding="utf-8")  # pedido enquanto o site está fora
+        raise RuntimeError("site fora do ar")
+
+    monkeypatch.setattr(coleta, "coletar", coletar)
+    assert rodar.rodar(arq, espera_falha=60) == 130
+    assert not (pasta / "PARAR").exists()
+    assert json.loads((pasta / "status.json").read_text(encoding="utf-8"))["fase"] == "interrompido"
+
+
+def test_espera_sem_pedido_de_parada(tmp_path):
+    from extrator.rodar import _parada_pedida
+
+    assert _parada_pedida(tmp_path, 0) is False
