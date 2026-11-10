@@ -36,6 +36,8 @@ class Api:
         self._janela = None
         self._bases = _bases()
         self._atualizando = {"ativo": False, "mensagem": ""}
+        self._nova_versao = None
+        self._instalando = {"ativo": False, "pct": None, "erro": ""}
 
     # ---------------- bases e formulários
     def bases(self):
@@ -211,6 +213,51 @@ class Api:
 
         threading.Thread(target=tarefa, daemon=True).start()
         return True
+
+    # ---------------- versão nova do programa (atualizacao.py)
+    def verificar_atualizacao(self):
+        from . import atualizacao
+
+        self._nova_versao = atualizacao.verificar()
+        if not self._nova_versao:
+            return None
+        return {**self._nova_versao, "atual": __version__, "pode_instalar": atualizacao.executavel() is not None,
+                "coleta_rodando": fila.fila_rodando()}
+
+    def abrir_release(self):
+        import webbrowser
+
+        if self._nova_versao and self._nova_versao.get("pagina"):
+            webbrowser.open(self._nova_versao["pagina"])
+        return True
+
+    def instalar_atualizacao(self):
+        """Baixa a versão nova em segundo plano; no fim fecha a janela e o script abre a versão nova."""
+        from . import atualizacao
+
+        if self._instalando["ativo"] or not self._nova_versao:
+            return {"erro": "Nenhuma versão nova para instalar."}
+        if fila.fila_rodando():
+            return {"erro": "Há uma coleta em andamento. Pare a coleta ou espere ela terminar para atualizar."}
+
+        def progresso(feito, total):
+            self._instalando["pct"] = round(100 * feito / total) if total else None
+
+        def tarefa():
+            try:
+                atualizacao.instalar(self._nova_versao, progresso)
+                if self._janela is not None:
+                    self._janela.destroy()
+            except Exception as e:
+                self._instalando.update(ativo=False, erro=f"Não foi possível atualizar: {e}. "
+                                                         "Baixe a versão nova no site do projeto.")
+
+        self._instalando.update(ativo=True, pct=0, erro="")
+        threading.Thread(target=tarefa, daemon=True).start()
+        return {"ok": True}
+
+    def estado_atualizacao(self):
+        return dict(self._instalando)
 
 
 def _hwnd(janela):
