@@ -1,29 +1,35 @@
 """
-PROTÓTIPO da janela de pedido de dados do TabNet/DATASUS.
+Janela de pedido de dados do TabNet/DATASUS.
 
-Só para avaliar a navegação: não coleta nada. As opções de cada campo são as reais,
-lidas dos formulários do TabNet (nacional e dos 27 estados) por ler_formularios.py e gravadas em
-opcoes_formularios.json.
+O usuário monta o pedido em seis passos, com as opções reais de cada formulário (nacional e dos
+27 estados), lidas do site por `python -m extrator atualizar-opcoes`. Ao gerar o pedido, a janela
+salva pedido.json na pasta de saída e pode iniciar a coleta (python -m extrator rodar).
 
 Comportamento do site (testado): várias opções marcadas no mesmo filtro, ou vários períodos,
 viram UM resultado só, somado; médias e taxas são recalculadas pelo site. Por isso, em cada
 filtro e no período, o usuário monta uma lista de itens: cada item é uma opção sozinha
 (coletada separada) ou um grupo de opções (coletadas juntas, somadas pelo site).
 
-Uso:  python janela_pedido.py
+Uso:  python -m extrator
 """
 import itertools
 import json
 import math
 import os
 import re
+import subprocess
 import sys
+import tempfile
 import tkinter as tk
 from pathlib import Path
-from tkinter import filedialog, simpledialog, ttk
+from tkinter import filedialog, messagebox, simpledialog, ttk
 
-PASTA = Path(__file__).resolve().parent
-OPCOES = json.loads((PASTA.parent / "extrator" / "opcoes_formularios.json").read_text(encoding="utf-8"))
+from .coleta import pasta_saida
+from .comum import gravar_json
+from .formularios import ARQUIVO_OPCOES
+
+PASTA = Path(tempfile.gettempdir())  # onde o modelo de planilha é gravado para abrir no Excel
+OPCOES = json.loads(ARQUIVO_OPCOES.read_text(encoding="utf-8"))
 SEGUNDOS_POR_CONSULTA = 20
 MESES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
 PASSOS = ["Base de dados", "Tabela", "Período", "Filtros", "Saída", "Revisar"]
@@ -379,7 +385,7 @@ class ConstrutorItens(ttk.Frame):
 class Janela(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Novo pedido de dados - DATASUS / TabNet  (protótipo)")
+        self.title("Novo pedido de dados - DATASUS / TabNet")
         self.geometry("1380x920")
         self.minsize(1240, 760)
         estilo = ttk.Style(self)
@@ -529,8 +535,8 @@ class Janela(tk.Tk):
             ("Quer filtrar ou detalhar?", "Opcional. Escolha um campo à esquerda e marque as opções. Com 1 opção, "
              "o pedido inteiro fica limitado a ela. Com 2 ou mais, cada uma vira uma coluna na planilha."),
             ("Como entregar?", "Formato da planilha, evidências e conferências automáticas."),
-            ("Revise o pedido", "Confira o resumo e a prévia da planilha. Nesta versão de demonstração nada é "
-             "consultado no site."),
+            ("Revise o pedido", "Confira o resumo e a prévia da planilha. Ao gerar, o pedido é salvo na pasta de "
+             "saída e a coleta pode começar na hora."),
         ]
         t, a = titulos[i]
         self.l_titulo.config(text=f"{i + 1}. {t}")
@@ -1302,6 +1308,11 @@ class Janela(tk.Tk):
         if self.regioes_aplicaveis() and self.v_regioes.get():
             n *= 2
             partes.append("2 (estados + regiões)")
+        try:  # o número exato vem do próprio plano da coleta
+            from .pedido import planejar
+            n = len(planejar(self.pedido()).consultas)
+        except Exception:
+            pass
         return n, partes
 
     def atualizar(self):
@@ -1338,23 +1349,41 @@ class Janela(tk.Tk):
     def gerar(self):
         if not all(self.validar(p) for p in range(len(PASSOS) - 1)):
             return
-        top = tk.Toplevel(self)
-        top.title("Pedido gerado (protótipo)")
-        top.geometry("680x560")
-        ttk.Label(top, text="Este é o arquivo de pedido que a coleta leria. Nada foi consultado no site.",
-                  padding=12).pack(anchor="w")
-        t = tk.Text(top, font=("Consolas", 9), wrap="none", padx=10, pady=8)
-        t.pack(fill="both", expand=True, padx=12)
-        texto = json.dumps(self.pedido(), ensure_ascii=False, indent=2)
-        t.insert("1.0", texto)
-        bt = ttk.Frame(top, padding=12)
-        bt.pack(fill="x")
-        ttk.Button(bt, text="Copiar", command=lambda: (self.clipboard_clear(), self.clipboard_append(texto))).pack(
-            side="left")
-        ttk.Button(bt, text="Fechar", command=top.destroy).pack(side="right")
+        pedido = self.pedido()
+        pasta = pasta_saida(pedido)
+        arquivo = pasta / "pedido.json"
+        if arquivo.exists() and not messagebox.askyesno(
+                "Pedido já existe", f"Já existe um pedido com esse nome em:\n{pasta}\n\nSubstituir? Se a coleta "
+                                    "já tinha começado, ela continua de onde parou nas consultas que não mudaram.",
+                parent=self):
+            return
+        try:
+            pasta.mkdir(parents=True, exist_ok=True)
+            gravar_json(arquivo, pedido)
+        except OSError as e:
+            messagebox.showerror("Não consegui salvar", f"Não foi possível gravar em {pasta}:\n{e}", parent=self)
+            return
+        n, _ = self.contar_consultas()
+        if messagebox.askyesno("Pedido salvo", f"Pedido salvo em:\n{arquivo}\n\n{fmt(n)} consultas ao site "
+                                               f"(cerca de {self.l_tempo.cget('text')}).\n\nIniciar a coleta agora?\n"
+                                               "Ela roda numa janela própria; pode fechar esta.", parent=self):
+            self.iniciar_coleta(arquivo)
+
+    def iniciar_coleta(self, arquivo):
+        raiz = Path(__file__).resolve().parent.parent
+        args = [sys.executable, "-m", "extrator", "rodar", str(arquivo)]
+        if sys.platform == "win32":
+            subprocess.Popen(args, cwd=raiz, creationflags=subprocess.CREATE_NEW_CONSOLE)
+        else:
+            subprocess.Popen(args, cwd=raiz, start_new_session=True)
+        messagebox.showinfo("Coleta iniciada",
+                            "A coleta começou numa janela própria. Ela salva cada consulta assim que termina: se "
+                            "for interrompida, gere o mesmo pedido de novo (ou rode \"python -m extrator rodar "
+                            "pedido.json\") e ela continua de onde parou.\n\nNo fim, a pasta terá a planilha, "
+                            "as evidências e o RELATÓRIO.txt.", parent=self)
 
 
-if __name__ == "__main__":
+def abrir():
     if sys.platform == "win32":
         try:
             import ctypes
@@ -1362,3 +1391,7 @@ if __name__ == "__main__":
         except Exception:
             pass
     Janela().mainloop()
+
+
+if __name__ == "__main__":
+    abrir()

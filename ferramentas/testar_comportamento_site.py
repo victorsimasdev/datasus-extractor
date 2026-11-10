@@ -1,4 +1,4 @@
-"""Testa no site o que acontece quando se marcam várias opções no mesmo campo (protótipo)."""
+"""Testa no site o que acontece quando se marcam várias opções no mesmo campo, ou vários períodos."""
 import html
 import json
 import re
