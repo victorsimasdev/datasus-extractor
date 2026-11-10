@@ -29,6 +29,9 @@ COMO ABRIR
 
 A primeira abertura leva alguns segundos a mais. Só uma janela do programa abre por vez.
 
+Quando sai uma versão nova, o programa avisa ao abrir e pergunta se quer instalar agora.
+Ele baixa a versão nova, fecha e abre de novo sozinho; coletas e histórico continuam.
+
 
 COMO USAR
 ---------
