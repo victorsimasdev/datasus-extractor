@@ -6,6 +6,7 @@ Lista Morb CID-10, Período, o filtro da coluna (ex.: "Sexo: Fem") e o valor da 
 (estados) ou da linha da região (NORTE ... SUL, BRASIL - TOTAL).
 
 Uso:  python conferir_perfil.py "ENTREGA - FA INTERNAÇÕES POR PERFIL DATASUS"
+Código de saída: 0 sem erros, 1 com qualquer erro, 2 com uso incorreto.
 """
 import sys
 import unicodedata
@@ -14,9 +15,6 @@ from pathlib import Path
 import openpyxl
 import pypdf
 
-ENT = Path(sys.argv[1])
-wb = openpyxl.load_workbook(ENT / "FA - INTERNAÇÕES - preenchida.xlsx")
-EV = ENT / "evidencias_perfil"
 MES = {"JUL": "Jul", "AGO": "Ago", "SET": "Set", "OUT": "Out", "NOV": "Nov", "DEZ": "Dez", "JAN": "Jan", "FEV": "Fev",
        "MAR": "Mar", "ABR": "Abr", "MAIO": "Mai", "JUN": "Jun"}
 NUM = {"JUL": 7, "AGO": 8, "SET": 9, "OUT": 10, "NOV": 11, "DEZ": 12, "JAN": 1, "FEV": 2, "MAR": 3, "ABR": 4,
@@ -41,7 +39,9 @@ CAB2 = dict(zip("HIJKLMNOPQRSTU", ["Masculin", "Feminino", "20 a 29 anos", "30 a
 REG = {31: "TOTAL", 32: "1 Região Norte", 33: "2 Região Nordeste", 34: "5 Região Centro-Oeste",
        35: "3 Região Sudeste", 36: "4 Região Sul"}
 CID = "Lista Morb CID-10: Transtornos de condução e arritmias cardíacas"
-nfc = lambda s: unicodedata.normalize("NFC", s)
+def nfc(s):
+    return unicodedata.normalize("NFC", s)
+
 
 
 def texto(pdf):
@@ -53,103 +53,120 @@ def br(v):  # valor da célula -> texto no formato do site
 
 
 def linha_pdf(t, rotulo):
-    achadas = [l for l in t.splitlines() if l.startswith(rotulo + " ")]
+    achadas = [linha for linha in t.splitlines() if linha.startswith(rotulo + " ")]
     if len(achadas) != 1:
         return None
     toks = achadas[0][len(rotulo):].split()
     return toks[0] if len(toks) == 1 else None
 
 
-erros, ok_cel, sr, usados = [], 0, 0, set()
-for ws in wb.worksheets:
-    if ws.title.startswith("EVIDÊNCIAS"):
-        continue
-    m, ano = ws.title.split()
-    pref = f"{ano}-{NUM[m]:02d} - {ws.title}"
-    periodo = f"Período: {MES[m]}/{ano}"
-    for col, cab in CAB2.items():
-        if ws[f"{col}2"].value != cab:
-            erros.append(f"{ws.title} {col}2: cabeçalho {ws[f'{col}2'].value!r}, esperado {cab!r}")
-    for row in list(range(3, 30)) + list(REG):
-        if ws[f"G{row}"].value != ws[f"B{row}"].value:
-            erros.append(f"{ws.title} G{row}={ws[f'G{row}'].value!r} diferente de B{row}={ws[f'B{row}'].value!r}")
-    for col, (pasta, cat, filtro) in COL.items():
-        for row in range(3, 30):
-            nome = ws[f"A{row}"].value.strip().upper()
-            estado = "TOCANTINS" if nome == "TOCATINS" else nome
-            pdf = EV / pasta / estado / f"{pref} - {estado} - {cat}.pdf"
-            png = pdf.with_suffix(".png")
-            usados |= {pdf, png}
-            cel = ws[f"{col}{row}"].value
-            onde = f"{ws.title} {col}{row} {nome} [{filtro}]"
-            if not pdf.is_file() or not png.is_file():
-                erros.append(f"{onde}: evidência ausente")
+def main(argv):
+    if len(argv) != 2:
+        print(__doc__)
+        return 2
+    ENT = Path(argv[1])
+    planilha = ENT / "FA - INTERNAÇÕES - preenchida.xlsx"
+    if not planilha.is_file():
+        print(f"ERRO: planilha não encontrada: {planilha}")
+        return 1
+    wb = openpyxl.load_workbook(planilha)
+    EV = ENT / "evidencias_perfil"
+
+    erros, ok_cel, sr, usados = [], 0, 0, set()
+    for ws in wb.worksheets:
+        if ws.title.startswith("EVIDÊNCIAS"):
+            continue
+        m, ano = ws.title.split()
+        pref = f"{ano}-{NUM[m]:02d} - {ws.title}"
+        periodo = f"Período: {MES[m]}/{ano}"
+        for col, cab in CAB2.items():
+            if ws[f"{col}2"].value != cab:
+                erros.append(f"{ws.title} {col}2: cabeçalho {ws[f'{col}2'].value!r}, esperado {cab!r}")
+        for row in list(range(3, 30)) + list(REG):
+            if ws[f"G{row}"].value != ws[f"B{row}"].value:
+                erros.append(f"{ws.title} G{row}={ws[f'G{row}'].value!r} diferente de B{row}={ws[f'B{row}'].value!r}")
+        for col, (pasta, cat, filtro) in COL.items():
+            for row in range(3, 30):
+                nome = ws[f"A{row}"].value.strip().upper()
+                estado = "TOCANTINS" if nome == "TOCATINS" else nome
+                pdf = EV / pasta / estado / f"{pref} - {estado} - {cat}.pdf"
+                png = pdf.with_suffix(".png")
+                usados |= {pdf, png}
+                cel = ws[f"{col}{row}"].value
+                onde = f"{ws.title} {col}{row} {nome} [{filtro}]"
+                if not pdf.is_file() or not png.is_file():
+                    erros.append(f"{onde}: evidência ausente")
+                    continue
+                t = texto(pdf)
+                if f"tabcgi.exe?sih/cnv/ni{SIGLA[estado]}.def" not in t:
+                    erros.append(f"{onde}: PDF não é da consulta do estado")
+                if "Nenhum registro selecionado" in t:
+                    form = EV / pasta / estado / f"{pref} - {estado} - {cat} - FORMULARIO (sem registro).png"
+                    usados.add(form)
+                    if cel == "SR" and form.is_file():
+                        sr += 1
+                        ok_cel += 1
+                    else:
+                        erros.append(f"{onde}: site sem registro, planilha={cel!r}")
+                    continue
+                for trecho in (CID, periodo, filtro, "Internações segundo Município", "Município Internações"):
+                    if trecho not in t:
+                        erros.append(f"{onde}: PDF sem '{trecho}'")
+                cab = [l for l in t.splitlines() if l.startswith("MORBIDADE HOSPITALAR DO SUS - POR LOCAL DE INTERNAÇÃO - ")]
+                if not cab or cab[0].split(" - ")[-1].upper() != estado:
+                    erros.append(f"{onde}: título do PDF = {cab}")
+                tok = linha_pdf(t, "TOTAL")
+                if tok is None or cel == "SR" or cel is None or br(cel) != tok:
+                    erros.append(f"{onde}: planilha={cel!r} evidência TOTAL={tok}")
+                else:
+                    ok_cel += 1
+
+            pdf = EV / pasta / "_BRASIL (conferência nacional)" / f"{pref} - BRASIL por Região - {cat}.pdf"
+            usados |= {pdf, pdf.with_suffix(".png")}
+            if not pdf.is_file():
+                erros.append(f"{ws.title} {col} [{filtro}]: evidência nacional por Região ausente")
                 continue
             t = texto(pdf)
-            if f"tabcgi.exe?sih/cnv/ni{SIGLA[estado]}.def" not in t:
-                erros.append(f"{onde}: PDF não é da consulta do estado")
-            if "Nenhum registro selecionado" in t:
-                form = EV / pasta / estado / f"{pref} - {estado} - {cat} - FORMULARIO (sem registro).png"
-                usados.add(form)
-                if cel == "SR" and form.is_file():
-                    sr += 1
-                    ok_cel += 1
-                else:
-                    erros.append(f"{onde}: site sem registro, planilha={cel!r}")
-                continue
-            for trecho in (CID, periodo, filtro, "Internações segundo Município", "Município Internações"):
+            for trecho in (CID, periodo, filtro, "Internações segundo Região", "POR LOCAL DE INTERNAÇÃO - BRASIL",
+                           "tabcgi.exe?sih/cnv/niuf.def"):
                 if trecho not in t:
-                    erros.append(f"{onde}: PDF sem '{trecho}'")
-            cab = [l for l in t.splitlines() if l.startswith("MORBIDADE HOSPITALAR DO SUS - POR LOCAL DE INTERNAÇÃO - ")]
-            if not cab or cab[0].split(" - ")[-1].upper() != estado:
-                erros.append(f"{onde}: título do PDF = {cab}")
-            tok = linha_pdf(t, "TOTAL")
-            if tok is None or cel == "SR" or cel is None or br(cel) != tok:
-                erros.append(f"{onde}: planilha={cel!r} evidência TOTAL={tok}")
-            else:
-                ok_cel += 1
+                    erros.append(f"{ws.title} {col} Região [{filtro}]: PDF sem '{trecho}'")
+            for row, rot in REG.items():
+                cel = ws[f"{col}{row}"].value
+                tok = linha_pdf(t, rot)
+                if tok is None and cel == "SR":
+                    ok_cel += 1  # região ausente da tabela nacional = sem registro
+                elif tok is None or cel in ("SR", None) or br(cel) != tok:
+                    erros.append(f"{ws.title} {col}{row} {ws[f'A{row}'].value} [{filtro}]: planilha={cel!r} evidência={tok}")
+                else:
+                    ok_cel += 1
 
-        pdf = EV / pasta / "_BRASIL (conferência nacional)" / f"{pref} - BRASIL por Região - {cat}.pdf"
-        usados |= {pdf, pdf.with_suffix(".png")}
-        if not pdf.is_file():
-            erros.append(f"{ws.title} {col} [{filtro}]: evidência nacional por Região ausente")
-            continue
-        t = texto(pdf)
-        for trecho in (CID, periodo, filtro, "Internações segundo Região", "POR LOCAL DE INTERNAÇÃO - BRASIL",
-                       "tabcgi.exe?sih/cnv/niuf.def"):
-            if trecho not in t:
-                erros.append(f"{ws.title} {col} Região [{filtro}]: PDF sem '{trecho}'")
-        for row, rot in REG.items():
-            cel = ws[f"{col}{row}"].value
-            tok = linha_pdf(t, rot)
-            if tok is None and cel == "SR":
-                ok_cel += 1  # região ausente da tabela nacional = sem registro
-            elif tok is None or cel in ("SR", None) or br(cel) != tok:
-                erros.append(f"{ws.title} {col}{row} {ws[f'A{row}'].value} [{filtro}]: planilha={cel!r} evidência={tok}")
-            else:
-                ok_cel += 1
+    # a consulta nacional por UF também é evidência (conferência cruzada): só conta como usada
+    for p in EV.rglob("* - BRASIL por UF - *"):
+        usados.add(p)
 
-# a consulta nacional por UF também é evidência (conferência cruzada): só conta como usada
-for p in EV.rglob("* - BRASIL por UF - *"):
-    usados.add(p)
+    ev = wb["EVIDÊNCIAS - PERFIL"]
+    links_ok = links_bad = 0
+    for r in ev.iter_rows(min_row=2):
+        for c in r[9:12]:
+            if c.hyperlink:
+                if (ENT / c.hyperlink.target).is_file():
+                    links_ok += 1
+                else:
+                    links_bad += 1
+                    erros.append(f"link quebrado: {c.hyperlink.target}")
+    todos = {p for p in EV.rglob("*") if p.is_file() and p.name != "desktop.ini"}
+    print(f"Células H-U conferidas idênticas à evidência: {ok_cel}  (das quais {sr} 'SR' de estado sem registro)")
+    print(f"Links da aba EVIDÊNCIAS - PERFIL ok: {links_ok}, quebrados: {links_bad}")
+    print(f"Arquivos de evidência: {len(todos)}; usados na conferência: {len(usados & todos)}; "
+          f"não referenciados: {len(todos - usados)}")
+    for p in sorted(todos - usados):
+        print("  extra:", p.relative_to(EV))
+    print(f"ERROS: {len(erros)}")
+    for e in erros:
+        print("  ", e)
+    return 1 if erros else 0
 
-ev = wb["EVIDÊNCIAS - PERFIL"]
-links_ok = links_bad = 0
-for r in ev.iter_rows(min_row=2):
-    for c in r[9:12]:
-        if c.hyperlink:
-            if (ENT / c.hyperlink.target).is_file():
-                links_ok += 1
-            else:
-                links_bad += 1
-                erros.append(f"link quebrado: {c.hyperlink.target}")
-todos = {p for p in EV.rglob("*") if p.is_file() and p.name != "desktop.ini"}
-print(f"Células H-U conferidas idênticas à evidência: {ok_cel}  (das quais {sr} 'SR' de estado sem registro)")
-print(f"Links da aba EVIDÊNCIAS - PERFIL ok: {links_ok}, quebrados: {links_bad}")
-print(f"Arquivos de evidência: {len(todos)}; usados na conferência: {len(usados & todos)}; "
-      f"não referenciados: {len(todos - usados)}")
-for p in sorted(todos - usados):
-    print("  extra:", p.relative_to(EV))
-print(f"ERROS: {len(erros)}")
-for e in erros:
-    print("  ", e)
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))
