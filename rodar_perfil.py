@@ -10,8 +10,6 @@ Execução sem supervisão da coleta por perfil (sexo, faixa etária, cor/raça)
 
 Uso:  python rodar_perfil.py
 """
-import ctypes
-import json
 import os
 import shutil
 import subprocess
@@ -21,6 +19,7 @@ from datetime import datetime
 from pathlib import Path
 
 from coletar_perfil import chave, todos_casos, todos_nacionais
+from comum import DadosCorrompidos, gravar_json, impedir_suspensao, ler_json
 
 PASTA = Path(__file__).resolve().parent
 LOG = PASTA / "execucao_perfil.log"
@@ -40,15 +39,12 @@ def log(msg):
 
 def status(**kw):
     kw["atualizado_em"] = datetime.now().isoformat(timespec="seconds")
-    STATUS.write_text(json.dumps(kw, ensure_ascii=False, indent=1), encoding="utf-8")
+    gravar_json(STATUS, kw)
 
 
 def faltam():
-    arq = PASTA / "dados_perfil.json"
-    try:
-        dados = json.loads(arq.read_text(encoding="utf-8")) if arq.exists() else {}
-    except json.JSONDecodeError:
-        dados = {}
+    # um JSON corrompido NÃO é tratado como vazio: levanta DadosCorrompidos e a execução para
+    dados = ler_json(PASTA / "dados_perfil.json", {})
     chaves = [chave(*c) for c in todos_casos() + todos_nacionais()]
     return [c for c in chaves if c not in dados], len(chaves)
 
@@ -66,14 +62,18 @@ def rodar_capturando(script, *args):
 
 
 def main():
-    # ES_CONTINUOUS | ES_SYSTEM_REQUIRED: o PC não suspende enquanto este processo estiver vivo
-    ctypes.windll.kernel32.SetThreadExecutionState(0x80000000 | 0x00000001)
+    impedir_suspensao()
     inicio = time.time()
     log("Início da execução (coleta por perfil)")
 
     rodada = 0
     while True:
-        pendentes, total = faltam()
+        try:
+            pendentes, total = faltam()
+        except DadosCorrompidos as e:
+            log(f"ERRO: {e}. Execução interrompida para não sobrescrever a coleta.")
+            status(fase="erro", motivo=str(e))
+            sys.exit(1)
         status(fase="coleta", feitas=total - len(pendentes), total=total)
         if not pendentes:
             break

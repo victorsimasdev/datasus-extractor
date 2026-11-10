@@ -20,7 +20,7 @@ Uso:
   python coletar_datasus.py           -> tudo (27 estados x 14 meses + nacional), em evidencias/
 Se for interrompido, rodar de novo continua de onde parou.
 """
-import json
+import os
 import re
 import sys
 import time
@@ -29,6 +29,8 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 from playwright.sync_api import sync_playwright
+
+from comum import DadosCorrompidos, gravar_json, ler_json
 
 BASE = "https://tabnet.datasus.gov.br/cgi"
 CID_VALOR = "174"
@@ -75,10 +77,21 @@ def num_br(s):
     return float(s.replace(".", "").replace(",", "."))
 
 
+def fonte_legenda(tamanho=15):
+    """Arial do Windows; em outro sistema (ou sem a Arial), uma fonte equivalente ou a padrão do Pillow."""
+    windir = os.environ.get("WINDIR", "C:/Windows")
+    for nome in (f"{windir}/Fonts/arial.ttf", "arial.ttf", "DejaVuSans.ttf", "LiberationSans-Regular.ttf"):
+        try:
+            return ImageFont.truetype(nome, tamanho)
+        except OSError:
+            continue
+    return ImageFont.load_default(size=tamanho)
+
+
 def legenda_png(caminho_png, linhas):
     """Põe uma faixa ACIMA do print (fora da página) com endereço e data/hora da consulta."""
     img = Image.open(caminho_png).convert("RGB")
-    fonte = ImageFont.truetype("C:/Windows/Fonts/arial.ttf", 15)
+    fonte = fonte_legenda()
     altura = 12 + 22 * len(linhas)
     nova = Image.new("RGB", (img.width, img.height + altura), (40, 40, 40))
     d = ImageDraw.Draw(nova)
@@ -250,15 +263,18 @@ def main():
     demo = "--demo" in sys.argv
     pasta_evid = PASTA / ("evidencias_demo" if demo else "evidencias")
     arq_dados = PASTA / ("dados_demo.json" if demo else "dados_coletados.json")
-    dados = json.loads(arq_dados.read_text(encoding="utf-8")) if arq_dados.exists() else {}
+    try:
+        dados = ler_json(arq_dados, {})
+    except DadosCorrompidos as e:
+        sys.exit(f"ERRO: {e}. Restaure a cópia de segurança antes de continuar.")
 
     casos = CASOS_DEMO if demo else [(uf, a, m) for uf in UFS for a, m in MESES]
     nacionais = NACIONAL_DEMO if demo else MESES
     total = len(casos) + 2 * len(nacionais)
     feitos = 0
 
-    def salvar():
-        arq_dados.write_text(json.dumps(dados, ensure_ascii=False, indent=1), encoding="utf-8")
+    def salvar():  # gravação atômica: uma interrupção nunca deixa o JSON pela metade
+        gravar_json(arq_dados, dados)
 
     with sync_playwright() as pw:
         col = Coletor(pw, pasta_evid)
