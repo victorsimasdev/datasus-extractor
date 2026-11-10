@@ -182,6 +182,24 @@ Os testes rodam no GitHub Actions a cada push, no Windows e no Ubuntu. Os script
 python ferramentas/verificar_formularios.py
 ```
 
+### Teste de regressão
+
+O workflow `Regressão` testa contra o site de verdade (os testes de unidade usam páginas salvas). Roda toda segunda-feira, à mão pela aba Actions e nos PRs que mexem na coleta ou no executável:
+
+- **coleta**: um pedido pequeno por base (`tests/regressao/pedidos`, em períodos antigos e já fechados no DATASUS), comparado célula a célula com o resultado conferido em `tests/regressao/esperado`;
+- **formulários**: os 112 formulários do site comparados com as opções que o programa conhece (só no agendamento e à mão);
+- **executável**: gera o `ExtratorDATASUS.exe` e roda coletas com ele.
+
+Se falhar, o GitHub manda e-mail. Uma diferença aponta a célula (`JAN 2022!B3: esperado 16903745, veio 16903744`). Se o DATASUS revisou de propósito um dado antigo, grave o novo esperado e revise o diff antes do commit:
+
+```bash
+python ferramentas/regressao.py
+```
+
+```bash
+python ferramentas/regressao.py --gravar
+```
+
 Gerar o executável e o zip da release localmente (no Windows):
 
 ```bash
