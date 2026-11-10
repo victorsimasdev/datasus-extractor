@@ -7,6 +7,9 @@ O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o 
 ### Adicionado
 - Ao abrir, o executável verifica se há versão nova nas releases e pergunta se quer instalar agora: baixa, confere o SHA-256, troca o `ExtratorDATASUS.exe` e abre a versão nova sozinho. Não instala com coleta em andamento.
 
+### Corrigido
+- Atualização: a troca do executável não depende mais do PATH (um `find.exe` do Git fazia a versão nova abrir antes de a antiga fechar, com o aviso "já está aberto"), e a verificação não falha quando sobra o exe antigo em uso.
+
 ## [2.0.0] - 2026-11-10
 
 Coleta genérica: qualquer pedido montado na interface, em quatro bases do TabNet.
