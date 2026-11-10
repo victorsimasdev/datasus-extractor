@@ -328,7 +328,7 @@ function renderColetas() {
   }
   return `<div class="grade-2" style="grid-template-columns:minmax(0,1.05fr) minmax(0,1fr)">
     <section class="cartao"><header><h2>Fila e histórico</h2><div class="lado-dir"><span class="muted" style="font-size:12px">uma coleta por vez</span></div></header>
-      ${lista.length ? `<table class="tab"><thead><tr><th>Pedido</th><th>Situação</th><th>Progresso</th><th></th></tr></thead><tbody>${lista.map((x) => linhaColeta(x, true)).join("")}</tbody></table>`
+      ${lista.length ? `<table class="tab compacta"><thead><tr><th>Pedido</th><th>Situação</th><th>Progresso</th><th></th></tr></thead><tbody>${lista.map((x) => linhaColeta(x, true)).join("")}</tbody></table>`
         : `<div class="vazio">${icone("vazio")}<b>Nenhuma coleta ainda</b><button class="btn primario" data-ir="novo">${icone("novo")}Novo pedido</button></div>`}
     </section>
     <section class="cartao"><div class="corpo">${det}</div></section></div>`;

@@ -188,6 +188,9 @@ table.tab { width: 100%; border-collapse: collapse; }
 .tab .nome b { font-weight: 600; }
 .tab .nome span { font: 11px var(--mono); color: var(--faint); }
 .tab .progresso { min-width: 150px; }
+/* ao lado do detalhe da coleta: o nome encolhe (com reticências) para a tabela caber no cartão */
+.tab.compacta td.nome { max-width: 0; width: 100%; }
+.tab.compacta .progresso { min-width: 110px; }
 .tab .progresso .mono { font-size: 12px; color: var(--muted); display: block; margin-bottom: 4px; }
 .tab .acoes-linha { display: flex; gap: 2px; justify-content: flex-end; opacity: .55; transition: opacity .15s; }
 .tab tr:hover .acoes-linha { opacity: 1; }
