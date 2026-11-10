@@ -12,6 +12,8 @@ Coleta genérica: qualquer pedido montado na janela, em quatro bases do TabNet.
 - Filtros e períodos com opções separadas, grupos somados pelo site e blocos de colunas na planilha.
 - Planilha em três formatos, com as abas EVIDÊNCIAS e _MAPA (origem de cada célula).
 - Validação de cada resultado no título da página (período e filtros) e registro de somas que não batem com o TOTAL do site.
+- Fila de coletas com histórico (tela "Minhas coletas" e comandos `fila` e `coletas`): uma coleta por vez, com progresso, parar, continuar e reordenar.
+- Só uma janela do programa aberta por vez.
 
 ### Alterado
 - SR passa a valer também para `-` (zero) e `...` (dado não disponível); linhas zeradas são sempre exibidas.

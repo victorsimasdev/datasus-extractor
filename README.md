@@ -44,11 +44,31 @@ Os seis passos da janela:
 5. **Saída**: pasta, formato da planilha, evidências e conferências.
 6. **Revisar**: prévia da planilha e resumo.
 
-Ao clicar em **Gerar pedido**, a janela salva `pedido.json` na pasta de saída e oferece iniciar a coleta, que roda numa janela própria. A coleta também pode ser iniciada (ou retomada) pela linha de comando:
+Ao clicar em **Gerar pedido**, a janela salva `pedido.json` na pasta de saída e coloca o pedido na **fila de coletas**.
+
+### Fila e histórico
+
+- **Uma coleta por vez**: as coletas rodam na ordem da fila, numa janela própria. Nunca há duas coletas ao mesmo tempo, nem duas janelas do programa abertas.
+- **Minhas coletas** (botão na barra lateral): a coleta em andamento com barra de progresso, fase e tempo restante, a fila em ordem e o histórico das coletas terminadas.
+- Na fila: subir, descer e tirar da fila. Em andamento: **parar** (termina a consulta atual e salva). Com erro ou interrompida: **continuar** de onde parou. Terminadas: abrir planilha, relatório e pasta.
+
+Pela linha de comando:
+
+```bash
+python -m extrator fila adicionar "caminho/do/pedido.json"
+```
+
+```bash
+python -m extrator coletas
+```
+
+Rodar um pedido direto (recusa se já houver uma coleta em andamento):
 
 ```bash
 python -m extrator rodar "caminho/do/pedido.json"
 ```
+
+O histórico fica em `~/.datasus-extractor` (ou na pasta da variável `DATASUS_EXTRATOR_HOME`).
 
 No fim, a pasta de saída do pedido tem:
 
@@ -114,6 +134,7 @@ Regras do site que o plano respeita (testadas no site):
 | `extrator/planilha.py` | Planilha a partir dos resultados, com as abas EVIDÊNCIAS e _MAPA. |
 | `extrator/conferencia.py` | Conferência independente pelos PDFs. |
 | `extrator/rodar.py` | Execução completa e sem supervisão. |
+| `extrator/fila.py` | Fila e histórico de coletas, travas entre processos (uma coleta e uma janela por vez). |
 | `extrator/comum.py` | Gravação atômica, conferência de cópias e prevenção de suspensão. |
 | `ferramentas/` | Conferências contra o site: a janela mostra tudo o que os formulários têm, e como o site soma seleções múltiplas. |
 | `tests/` | Testes (pytest), sem acesso ao site, com respostas reais do site guardadas em `tests/dados/`. |
