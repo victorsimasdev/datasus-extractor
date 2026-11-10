@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Extrator DATASUS</title>
+<meta name="description" content="Programa gratuito para Windows que coleta tabulações do TabNet/DATASUS (SIH, SIM, SINASC e SIA) em planilha Excel, com o PDF de cada consulta e conferência independente.">
+<link rel="icon" href="img/icone.png">
+<meta property="og:title" content="Extrator DATASUS">
+<meta property="og:description" content="Do TabNet à planilha, com a prova de cada número. Gratuito, para Windows.">
+<meta property="og:image" content="img/painel.webp">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* as cores da própria interface do programa (tema escuro) */
+  --bg: #0e1116;
+  --surface: #151a21;
+  --raise: #1b212a;
+  --ink: #e6e9ee;
+  --muted: #9aa4b2;
+  --accent: #4cc2ff;
+  --accent-ink: #06131c;
+  --ok: #5fd08a;
+  --r: 10px;
+  --margem: clamp(20px, 4vw, 56px);
+  --step-small: clamp(0.8125rem, 0.79rem + 0.1vw, 0.875rem);
+  --step-body: clamp(1.0625rem, 1rem + 0.25vw, 1.1875rem);
+  --step-lead: clamp(1.25rem, 1.1rem + 0.7vw, 1.625rem);
+  --step-head: clamp(2rem, 1.3rem + 3.2vw, 4rem);
+  --step-display: clamp(2.1rem, 0.9rem + 5.4vw, 6.4rem);
+  --ease: cubic-bezier(.16, 1, .3, 1);
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font: 400 var(--step-body)/1.5 "Schibsted Grotesk", "Segoe UI", system-ui, sans-serif;
+  letter-spacing: -0.01em; -webkit-font-smoothing: antialiased;
+}
+img { display: block; max-width: 100%; height: auto; }
+a { color: inherit; }
+::selection { background: var(--accent); color: var(--accent-ink); }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+.quadro { width: 100%; max-width: 1440px; margin: 0 auto; padding: 0 var(--margem); }
+h1, h2, h3 { font-weight: 800; letter-spacing: -0.045em; line-height: 0.95; margin: 0; }
+h2 { font-size: var(--step-head); }
+p { margin: 0; }
+
+/* ---------------------------------------------------------------- barra */
+.barra { display: flex; align-items: center; gap: 28px; padding-block: 22px; font-weight: 600; font-size: var(--step-small); }
+.marca { display: flex; align-items: center; gap: 10px; text-decoration: none; font-size: 1rem; }
+.marca img { width: 28px; height: 28px; border-radius: 7px; }
+.barra nav { display: flex; gap: 24px; margin-left: auto; }
+.barra nav a { text-decoration: none; color: var(--muted); transition: color .2s; }
+.barra nav a:hover { color: var(--ink); }
+
+/* ---------------------------------------------------------------- botões */
+.botao {
+  display: inline-flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 26px;
+  background: var(--accent); color: var(--accent-ink); border-radius: 999px; border: 0;
+  font: 600 1.0625rem/1 inherit; font-family: inherit; text-decoration: none; cursor: pointer;
+  transition: transform .25s var(--ease), background-color .2s;
+}
+.botao:hover { background: #7fd4ff; transform: translateY(-2px); }
+.botao:active { transform: translateY(0) scale(.98); }
+.botao svg { width: 20px; height: 20px; }
+.botao.pequeno { min-height: 44px; padding: 0 20px; font-size: var(--step-small); }
+.link { color: var(--ink); text-underline-offset: 4px; text-decoration-thickness: 2px; transition: color .2s; }
+.link:hover { color: var(--accent); }
+
+/* ---------------------------------------------------------------- topo */
+.topo { padding-top: clamp(40px, 8vh, 96px); }
+.topo h1 { font-size: clamp(1.85rem, 0.9rem + 5.4vw, 6.4rem); line-height: 0.92; }
+.topo h1 .l { display: block; overflow: hidden; padding-bottom: 0.08em; margin-bottom: -0.08em; }
+.topo h1 .l > span { display: block; white-space: nowrap; }
+.topo .grade { display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); gap: clamp(32px, 4vw, 64px); margin-top: clamp(32px, 5vh, 56px); align-items: start; }
+.topo .apoio { max-width: 34ch; font-size: var(--step-lead); line-height: 1.4; }
+.acoes { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 28px; margin-top: 36px; }
+.acoes .info { color: var(--muted); font-size: var(--step-small); }
+.vitrine { margin: 0; }
+.vitrine img { width: 100%; border-radius: var(--r); background: var(--surface); }
+@media (max-width: 960px) { .topo .grade { grid-template-columns: minmax(0, 1fr); } .topo .apoio { max-width: 46ch; } }
+
+/* ---------------------------------------------------------------- prova (o exemplo interativo) */
+.secao { padding-top: clamp(120px, 14vw, 200px); }
+.prova { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: clamp(32px, 5vw, 80px); align-items: start; }
+.prova .texto { display: grid; gap: 22px; max-width: 46ch; }
+.prova .texto h2 { margin-bottom: 8px; }
+.prova .texto p + p { color: var(--ink); }
+.demo { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
+.demo .painel { background: var(--surface); border-radius: var(--r); padding: 18px; min-width: 0; }
+.demo h3 { font-size: 1.0625rem; letter-spacing: -0.02em; line-height: 1.2; margin-bottom: 4px; }
+.demo .sub { color: var(--muted); font-size: var(--step-small); margin-bottom: 14px; }
+/* fragmento da planilha (data-ui: convenções do próprio produto) */
+.planilha { max-height: 404px; overflow: auto; border-radius: 6px; background: #0b0e12; }
+.planilha table { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+.planilha th { position: sticky; top: 0; background: #1b212a; text-align: right; font-weight: 600; padding: 8px 10px; color: var(--muted); }
+.planilha th:first-child { text-align: left; }
+.planilha td { padding: 0; border-top: 1px solid rgba(255, 255, 255, .06); }
+.planilha td:first-child { padding: 7px 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 0; width: 46%; }
+.planilha button {
+  display: block; width: 100%; padding: 7px 10px; border: 0; background: none; color: var(--ink);
+  font: inherit; text-align: right; cursor: pointer; transition: background-color .15s;
+}
+.planilha button:hover { background: rgba(76, 194, 255, .12); }
+.planilha button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.planilha .sr { color: var(--muted); }
+.planilha tr.total td { font-weight: 600; }
+/* a evidência: o texto do resultado no site, como fica no PDF */
+.evidencia { display: grid; gap: 12px; align-content: start; }
+.folha { background: #f4f5f7; color: #1d2128; border-radius: 6px; padding: 16px; font-size: 13px; line-height: 1.45; }
+.folha .tit { font-weight: 600; }
+.folha .linha { margin-top: 12px; display: grid; grid-template-columns: 1fr auto auto; gap: 14px; padding: 8px 12px; background: #fff5c4; border-radius: 4px; font-variant-numeric: tabular-nums; }
+.folha .linha b { font-weight: 600; }
+.folha .linha .marcado { background: #ffd84d; border-radius: 3px; padding: 1px 6px; margin: -1px -6px; }
+.folha .fonte { margin-top: 12px; color: #5b6573; font-size: 12px; word-break: break-word; }
+.veredito { display: flex; gap: 10px; align-items: flex-start; font-size: var(--step-small); color: var(--ink); }
+.veredito svg { flex: none; width: 20px; height: 20px; color: var(--ok); margin-top: 1px; }
+
+/* ---------------------------------------------------------------- como usar (print fixo, frases mudam) */
+.uso { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: clamp(32px, 5vw, 80px); }
+.uso h2 { margin-bottom: clamp(24px, 4vh, 48px); }
+.frase { min-height: 62vh; display: flex; flex-direction: column; justify-content: center; gap: 14px; }
+.frase:first-of-type { min-height: 48vh; justify-content: flex-start; }
+.frase h3 { font-size: clamp(1.6rem, 1.1rem + 1.6vw, 2.25rem); letter-spacing: -0.035em; line-height: 1.05; color: var(--muted); transition: color .35s; }
+.frase p { color: var(--muted); max-width: 38ch; transition: color .35s; }
+.frase.ativa h3, .frase.ativa p { color: var(--ink); }
+.frase .print-celular { display: none; }
+.palco { position: sticky; top: 12vh; height: 76vh; display: grid; align-items: center; }
+.palco figure { margin: 0; position: relative; aspect-ratio: 16 / 10; }
+.palco img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: left top; border-radius: var(--r); background: var(--surface); opacity: 0; transform: scale(.985); transition: opacity .5s var(--ease), transform .7s var(--ease); }
+.palco img.ativa { opacity: 1; transform: none; }
+
+/* ---------------------------------------------------------------- listas */
+.listas { display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); gap: clamp(32px, 5vw, 80px); align-items: start; }
+.listas .colunas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 40px clamp(24px, 4vw, 64px); }
+.grupo h3 { font-size: var(--step-lead); letter-spacing: -0.03em; margin-bottom: 14px; }
+.grupo ul { list-style: none; margin: 0; padding: 0; }
+.grupo li { display: flex; justify-content: space-between; gap: 18px; padding: 9px 0; }
+.grupo li b { font-weight: 600; white-space: nowrap; }
+.grupo li span { color: var(--muted); text-align: right; font-size: var(--step-small); padding-top: 2px; }
+.listas .claro { margin-top: 24px; }
+.listas .claro img { border-radius: var(--r); }
+.legenda { color: var(--muted); font-size: var(--step-small); margin-top: 10px; }
+
+/* ---------------------------------------------------------------- dúvidas */
+.duvidas { display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); gap: clamp(32px, 5vw, 80px); align-items: start; }
+.duvidas h2 { align-self: start; }
+.tiles { display: grid; gap: 8px; }
+details { background: var(--surface); border-radius: var(--r); transition: background-color .25s; }
+details[open] { background: var(--accent); color: var(--accent-ink); }
+summary { list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 20px; min-height: 72px; padding: 18px 24px; font-weight: 600; font-size: 1.15rem; cursor: pointer; }
+summary::-webkit-details-marker { display: none; }
+summary:hover { color: var(--accent); }
+details[open] summary:hover { color: var(--accent-ink); }
+.mais { position: relative; flex: none; width: 16px; height: 16px; }
+.mais::before, .mais::after { content: ""; position: absolute; left: 0; top: 6.5px; width: 16px; height: 3px; background: currentColor; border-radius: 2px; transition: transform .3s var(--ease); }
+.mais::after { transform: rotate(90deg); }
+details[open] .mais::after { transform: rotate(0deg); }
+details p { padding: 0 24px 22px; max-width: 58ch; }
+
+/* ---------------------------------------------------------------- download e rodapé */
+.fim { padding-top: clamp(120px, 14vw, 200px); display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: clamp(32px, 5vw, 80px); align-items: end; }
+.fim h2 { font-size: var(--step-display); }
+.fim .lado { display: grid; gap: 22px; justify-items: start; }
+.fim .lado p { color: var(--ink); max-width: 40ch; }
+.rodape { display: grid; grid-template-columns: 1fr auto 1fr; gap: 16px 24px; padding-block: 30vh 30px; font-size: var(--step-small); color: var(--muted); }
+.rodape nav { display: flex; gap: 24px; }
+.rodape nav a { color: var(--ink); text-decoration: none; }
+.rodape nav a:hover { color: var(--accent); }
+.rodape .dir { text-align: right; }
+
+/* ---------------------------------------------------------------- movimento */
+.js .sobe { opacity: 0; transform: translateY(24px); transition: opacity .8s var(--ease), transform .8s var(--ease); transition-delay: calc(var(--i, 0) * 80ms); }
+.js .sobe.visto { opacity: 1; transform: none; }
+.js .topo h1 .l > span { transform: translateY(105%); animation: linha .9s var(--ease) forwards; }
+.js .topo h1 .l:nth-child(2) > span { animation-delay: .11s; }
+.js .topo .entra { opacity: 0; animation: aparece .7s var(--ease) .55s forwards; }
+.js .vitrine img { animation: aproxima 1.4s var(--ease) .3s both; }
+@keyframes linha { to { transform: none; } }
+@keyframes aparece { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@keyframes aproxima { from { opacity: 0; transform: translateY(40px) scale(.97); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .js .sobe, .js .topo .entra, .js .vitrine img, .js .topo h1 .l > span { opacity: 1; transform: none; animation: none; transition: none; }
+  .palco img { transition: none; }
+}
+
+/* ---------------------------------------------------------------- telas menores */
+@media (max-width: 960px) {
+  .prova, .uso, .listas, .duvidas, .fim { grid-template-columns: minmax(0, 1fr); }
+  .palco { display: none; }
+  .frase, .frase:first-of-type { min-height: 0; padding-bottom: 56px; }
+  .frase h3, .frase p { color: var(--ink); }
+  .frase .print-celular { display: block; margin-top: 10px; border-radius: var(--r); background: var(--surface); }
+  .duvidas h2 { position: static; }
+}
+@media (max-width: 640px) {
+  .barra nav { display: none; }
+  .barra .botao { margin-left: auto; }
+  .demo { grid-template-columns: minmax(0, 1fr); }
+  .listas .colunas { grid-template-columns: minmax(0, 1fr); }
+  summary { font-size: 1.05rem; min-height: 64px; padding: 16px 20px; }
+  details p { padding: 0 20px 20px; font-size: 1rem; }
+  .rodape { grid-template-columns: minmax(0, 1fr); padding-block: 20vh 24px; gap: 8px; }
+  .rodape nav { flex-wrap: wrap; gap: 8px 20px; }
+  .rodape .dir { text-align: left; }
+}
+</style>
+</head>
+<body>
+<header class="quadro barra">
+  <a class="marca" href="#"><img src="img/icone.png" alt="" width="28" height="28">Extrator DATASUS</a>
+  <nav aria-label="Seções">
+    <a href="#prova">Como funciona</a>
+    <a href="#como-usar">Como usar</a>
+    <a href="#duvidas">Dúvidas</a>
+  </nav>
+  <a class="botao pequeno" href="#baixar">Baixar</a>
+</header>
+
+<main>
+  <section class="quadro topo">
+    <h1><span class="l"><span>Do TabNet à planilha,</span></span><span class="l"><span>com prova</span></span></h1>
+    <div class="grade">
+    <div>
+    <p class="apoio entra">Programa gratuito para Windows que coleta qualquer tabulação de internações, mortalidade, nascidos vivos e produção ambulatorial do DATASUS e entrega uma planilha Excel com o PDF de cada consulta.</p>
+    <div class="acoes entra">
+      <a class="botao baixar" href="https://github.com/victorsimasdev/datasus-extractor/releases/latest">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
+        Baixar para Windows
+      </a>
+      <span class="info versao">Windows 10 ou 11 · não precisa instalar nada</span>
+    </div>
+    </div>
+    <figure class="vitrine">
+      <img src="img/painel.webp" width="1920" height="1200" alt="Painel do Extrator DATASUS: uma coleta em andamento com 67 de 112 consultas, uma na fila e uma concluída com 3.136 células e nenhum erro na conferência.">
+    </figure>
+    </div>
+  </section>
+
+  <section class="quadro secao" id="prova" aria-labelledby="t-prova">
+    <div class="prova">
+      <div class="texto">
+        <h2 id="t-prova" class="sobe">Cada número tem a sua prova</h2>
+        <p class="sobe" style="--i:1">O programa preenche o formulário do TabNet como uma pessoa faria, num navegador sem janela, e confere filtros e período em cada resultado antes de guardar.</p>
+        <p class="sobe" style="--i:2">De cada consulta ficam o PDF e a imagem da página do site, com data, hora e endereço. Na planilha, a aba EVIDÊNCIAS liga cada valor ao seu PDF.</p>
+        <p class="sobe" style="--i:3">No fim, uma conferência independente relê os PDFs e compara célula por célula. Nenhum número é calculado pelo programa: tudo é o que o próprio site mostrou.</p>
+        <p class="sobe" style="--i:4">Aqui, um resultado real do TabNet. Clique num número da planilha para ver de onde ele veio.</p>
+      </div>
+      <div class="demo sobe" style="--i:2" data-ui>
+        <div class="painel">
+          <h3>Planilha</h3>
+          <p class="sub">Internações por arritmias cardíacas, Jul/2025</p>
+          <div class="planilha" id="planilha">
+            <table>
+              <thead><tr><th>Estado</th><th>Internações</th><th>Valor médio</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="painel evidencia" aria-live="polite">
+          <h3>Evidência</h3>
+          <p class="sub" id="ev-arquivo">PDF da consulta no TabNet</p>
+          <div class="folha">
+            <p class="tit">Morbidade Hospitalar do SUS - por local de internação - Brasil</p>
+            <p>Internações, Valor médio intern segundo Unidade da Federação</p>
+            <p>Lista Morb CID-10: Transtornos de condução e arritmias cardíacas</p>
+            <p>Período: Jul/2025</p>
+            <div class="linha" id="ev-linha"><b>35 São Paulo</b><span>1.777</span><span>4.981,88</span></div>
+            <p class="fonte">Consultado no tabnet.datasus.gov.br · Formulário sih/cnv/niuf.def</p>
+          </div>
+          <p class="veredito" id="ev-veredito"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5L20 7"/></svg><span>A célula tem 1777, o mesmo número do PDF.</span></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="quadro secao" id="como-usar" aria-labelledby="t-uso">
+    <div class="uso">
+      <div>
+        <h2 id="t-uso" class="sobe">Como usar</h2>
+        <div class="frase ativa" data-print="0">
+          <h3>Escolha a base e onde.</h3>
+          <p>Internações (SIH), mortalidade (SIM), nascidos vivos (SINASC) ou produção ambulatorial (SIA), no Brasil inteiro ou dentro de estados.</p>
+          <img class="print-celular" src="img/passo-base.webp" width="1920" height="1200" loading="lazy" alt="Primeiro passo do novo pedido: escolha entre as quatro bases e entre Brasil inteiro ou dentro de estados.">
+        </div>
+        <div class="frase" data-print="1">
+          <h3>Depois, o que contar.</h3>
+          <p>Internações, óbitos, valores… O que vai em cada linha e, se quiser, uma quebra em colunas. As opções vêm do próprio site.</p>
+          <img class="print-celular" src="img/passo-contar.webp" width="1920" height="1200" loading="lazy" alt="Segundo passo: o que contar em cada célula, uma linha da planilha para cada estado e a quebra opcional em colunas.">
+        </div>
+        <div class="frase" data-print="2">
+          <h3>Marque períodos e filtros.</h3>
+          <p>Cada mês ou ano sai separado ou somado num grupo. Filtros por sexo, faixa etária, cor/raça e o que mais o formulário tiver.</p>
+          <img class="print-celular" src="img/passo-periodo.webp" width="1920" height="1200" loading="lazy" alt="Terceiro passo: lista de períodos com atalhos para cada um separado, tudo somado ou um grupo por ano.">
+        </div>
+        <div class="frase" data-print="3">
+          <h3>Confira a prévia e gere.</h3>
+          <p>Antes de começar você vê a planilha, quantas consultas serão feitas e quanto tempo vai levar.</p>
+          <img class="print-celular" src="img/passo-previa.webp" width="1920" height="1200" loading="lazy" alt="Último passo: prévia da planilha com os estados e as regiões, e a estimativa de consultas e tempo.">
+        </div>
+        <div class="frase" data-print="4">
+          <h3>Acompanhe a coleta.</h3>
+          <p>Uma coleta por vez, com progresso e registro ao vivo. Pode fechar a janela: ela continua, e se parar recomeça de onde estava.</p>
+          <img class="print-celular" src="img/coletas.webp" width="1920" height="1200" loading="lazy" alt="Minhas coletas: fila e histórico ao lado do detalhe da coleta em andamento, com 67 de 112 consultas e o registro ao vivo.">
+        </div>
+      </div>
+      <div class="palco" aria-hidden="true">
+        <figure>
+          <img class="ativa" src="img/passo-base.webp" width="1920" height="1200" alt="">
+          <img src="img/passo-contar.webp" width="1920" height="1200" alt="" loading="lazy">
+          <img src="img/passo-periodo.webp" width="1920" height="1200" alt="" loading="lazy">
+          <img src="img/passo-previa.webp" width="1920" height="1200" alt="" loading="lazy">
+          <img src="img/coletas.webp" width="1920" height="1200" alt="" loading="lazy">
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section class="quadro secao" id="o-que-sai" aria-labelledby="t-sai">
+    <div class="listas">
+      <div>
+        <h2 id="t-sai" class="sobe">O que você recebe</h2>
+        <figure class="claro sobe" style="--i:1;margin-inline:0">
+          <img src="img/painel-claro.webp" width="1920" height="1200" loading="lazy" alt="O painel do programa no tema claro.">
+          <figcaption class="legenda">Temas claro, escuro e rosa, ou seguindo o Windows.</figcaption>
+        </figure>
+      </div>
+      <div class="colunas">
+        <div class="grupo sobe" style="--i:1">
+          <h3>Na pasta do pedido</h3>
+          <ul>
+            <li><b>A planilha .xlsx</b><span>uma aba por período</span></li>
+            <li><b>Aba EVIDÊNCIAS</b><span>link do PDF e da imagem</span></li>
+            <li><b>Pasta evidencias</b><span>PDF e PNG de cada consulta</span></li>
+            <li><b>RELATÓRIO.txt</b><span>resumo e conferência</span></li>
+          </ul>
+        </div>
+        <div class="grupo sobe" style="--i:2">
+          <h3>O que precisa</h3>
+          <ul>
+            <li><b>Windows</b><span>10 ou 11</span></li>
+            <li><b>Internet</b><span>para consultar o site</span></li>
+            <li><b>Chrome ou Edge</b><span>o Edge já vem no Windows</span></li>
+            <li><b>Python</b><span>não precisa</span></li>
+          </ul>
+        </div>
+        <div class="grupo sobe" style="--i:3">
+          <h3>Quando o site não tem o dado</h3>
+          <ul>
+            <li><b>SR, sem resultado</b><span>linha zerada ou sem registro</span></li>
+            <li><b>Traço no site</b><span>vira SR (zero)</span></li>
+            <li><b>Reticências no site</b><span>vira SR (não disponível)</span></li>
+          </ul>
+        </div>
+        <div class="grupo sobe" style="--i:4">
+          <h3>Por dentro</h3>
+          <ul>
+            <li><b>Fila de coletas</b><span>uma por vez</span></li>
+            <li><b>Retomada</b><span>continua de onde parou</span></li>
+            <li><b>Atualização</b><span>avisa e instala sozinho</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="quadro secao" id="duvidas" aria-labelledby="t-duvidas">
+    <div class="duvidas">
+      <h2 id="t-duvidas" class="sobe">Dúvidas</h2>
+      <div class="tiles">
+        <details name="duvida" class="sobe" open>
+          <summary>Como instalo?<span class="mais" aria-hidden="true"></span></summary>
+          <p>Não tem instalador. Baixe o zip, extraia numa pasta (por exemplo, Documentos\Extrator DATASUS) e dê dois cliques em ExtratorDATASUS.exe. Não abra o programa de dentro do zip. A primeira abertura leva alguns segundos a mais.</p>
+        </details>
+        <details name="duvida" class="sobe" style="--i:1">
+          <summary>O Windows diz que protegeu o computador<span class="mais" aria-hidden="true"></span></summary>
+          <p>Acontece porque o programa não tem assinatura digital paga. Clique em "Mais informações" e depois em "Executar assim mesmo". O código é aberto e está no GitHub. Para não ver o aviso, antes de extrair clique no zip com o botão direito, Propriedades, e marque Desbloquear.</p>
+        </details>
+        <details name="duvida" class="sobe" style="--i:2">
+          <summary>Como atualizo?<span class="mais" aria-hidden="true"></span></summary>
+          <p>A partir da versão 2.2, o programa avisa ao abrir quando sai uma versão nova e pergunta se quer instalar. Ele baixa, fecha e abre de novo sozinho. Coletas e histórico continuam como estão.</p>
+        </details>
+        <details name="duvida" class="sobe" style="--i:3">
+          <summary>Os números são confiáveis?<span class="mais" aria-hidden="true"></span></summary>
+          <p>Cada valor é o texto exato que o site mostrou, e a conferência relê os PDFs no fim. Os dados dos últimos seis meses ainda podem ser atualizados pelo DATASUS, então vale coletar de novo mais tarde.</p>
+        </details>
+        <details name="duvida" class="sobe" style="--i:4">
+          <summary>A coleta parou no meio<span class="mais" aria-hidden="true"></span></summary>
+          <p>O site do DATASUS às vezes fica lento ou fora do ar. O programa espera e tenta de novo sozinho, e cada consulta já feita fica salva. Se você parar, em "Minhas coletas" a coleta continua de onde estava.</p>
+        </details>
+        <details name="duvida" class="sobe" style="--i:5">
+          <summary>A janela abre em branco<span class="mais" aria-hidden="true"></span></summary>
+          <p>Instale o "Microsoft Edge WebView2 Runtime", no site da Microsoft. No Windows 11 ele já vem instalado.</p>
+        </details>
+        <details name="duvida" class="sobe" style="--i:6">
+          <summary>Aparece "Nenhum navegador encontrado"<span class="mais" aria-hidden="true"></span></summary>
+          <p>A coleta usa o navegador do computador, sem abrir janela. Instale o Google Chrome ou atualize o Microsoft Edge.</p>
+        </details>
+        <details name="duvida" class="sobe" style="--i:7">
+          <summary>Tem vínculo com o DATASUS?<span class="mais" aria-hidden="true"></span></summary>
+          <p>Não. É um projeto independente, sem vínculo com o DATASUS nem com o Ministério da Saúde, que usa os dados públicos do TabNet. O site é público: use com moderação.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <section class="quadro fim" id="baixar" aria-labelledby="t-baixar">
+    <h2 id="t-baixar" class="sobe">Gratuito e de código aberto</h2>
+    <div class="lado">
+      <p class="sobe" style="--i:1">Um zip com o programa, o LEIA-ME e a licença MIT. Sem cadastro, sem instalador, sem Python.</p>
+      <a class="botao baixar sobe" style="--i:2" href="https://github.com/victorsimasdev/datasus-extractor/releases/latest">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
+        Baixar para Windows
+      </a>
+      <p class="info versao sobe" style="--i:3;color:var(--muted);font-size:var(--step-small)">Windows 10 ou 11</p>
+      <a class="link sobe" style="--i:4" href="https://github.com/victorsimasdev/datasus-extractor">Ver o código no GitHub</a>
+    </div>
+  </section>
+</main>
+
+<footer class="quadro rodape">
+  <span>Extrator DATASUS, projeto independente</span>
+  <nav aria-label="Links">
+    <a href="https://github.com/victorsimasdev/datasus-extractor">GitHub</a>
+    <a href="https://github.com/victorsimasdev/datasus-extractor/releases">Versões</a>
+    <a href="https://github.com/victorsimasdev/datasus-extractor/issues/new/choose">Reportar um problema</a>
+  </nav>
+  <span class="dir">Licença MIT · 2026</span>
+</footer>
+
+<script>
+document.documentElement.classList.add("js");
+
+// resultado real do TabNet (SIH, Jul/2025), o mesmo usado nos testes do projeto
+const DADOS = [
+  ["TOTAL", "7.475", "5.267,84"], ["11 Rondônia", "51", "4.060,33"], ["12 Acre", "13", "728,99"],
+  ["13 Amazonas", "62", "4.648,96"], ["14 Roraima", "6", "4.110,63"], ["15 Pará", "97", "3.946,98"],
+  ["16 Amapá", "22", "4.920,80"], ["17 Tocantins", "57", "5.458,49"], ["21 Maranhão", "92", "4.326,37"],
+  ["22 Piauí", "75", "3.622,69"], ["23 Ceará", "222", "5.432,71"], ["24 Rio Grande do Norte", "101", "7.182,68"],
+  ["25 Paraíba", "107", "7.504,40"], ["26 Pernambuco", "298", "4.966,02"], ["27 Alagoas", "59", "10.859,51"],
+  ["28 Sergipe", "91", "6.157,19"], ["29 Bahia", "401", "4.271,34"], ["31 Minas Gerais", "1.036", "5.834,32"],
+  ["32 Espírito Santo", "165", "6.246,57"], ["33 Rio de Janeiro", "569", "4.707,80"], ["35 São Paulo", "1.777", "4.981,88"],
+  ["41 Paraná", "587", "6.175,50"], ["42 Santa Catarina", "356", "5.544,80"], ["43 Rio Grande do Sul", "639", "6.337,93"],
+  ["50 Mato Grosso do Sul", "112", "3.702,67"], ["51 Mato Grosso", "93", "1.863,92"], ["52 Goiás", "236", "2.865,61"],
+  ["53 Distrito Federal", "151", "4.819,20"], ["00 Ignorado/exterior", "-", "..."],
+];
+const naCelula = (t) => (t === "-" || t === "..." ? "SR" : t.replace(/\./g, ""));
+const nome = (r) => (r === "TOTAL" ? "Brasil" : r.replace(/^\d+ /, ""));
+const corpo = document.querySelector("#planilha tbody");
+corpo.innerHTML = DADOS.map(([r, a, b], i) => `<tr class="${i ? "" : "total"}"><td>${nome(r)}</td>`
+  + [a, b].map((v, j) => `<td><button type="button" data-l="${i}" data-c="${j}" class="${naCelula(v) === "SR" ? "sr" : ""}"
+     aria-pressed="false" aria-label="${nome(r)}, ${j ? "valor médio" : "internações"}: ${naCelula(v)}">${naCelula(v)}</button></td>`).join("")
+  + "</tr>").join("");
+
+function mostrar(l, c) {
+  const [r, a, b] = DADOS[l];
+  corpo.querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(+x.dataset.l === l && +x.dataset.c === c)));
+  const marca = (v, j) => `<span class="${j === c ? "marcado" : ""}">${v}</span>`;
+  document.getElementById("ev-linha").innerHTML = `<b>${r === "TOTAL" ? "Total" : r}</b>${marca(a, 0)}${marca(b, 1)}`;
+  const v = c ? b : a, cel = naCelula(v);
+  document.querySelector("#ev-veredito span").textContent = cel === "SR"
+    ? `O site mostra "${v}", e a célula fica SR, ${v === "-" ? "zero" : "dado não disponível"}.`
+    : `A célula tem ${cel}, o mesmo número do PDF.`;
+}
+corpo.addEventListener("click", (e) => { const x = e.target.closest("button"); if (x) mostrar(+x.dataset.l, +x.dataset.c); });
+mostrar(20, 0);
+
+// versão e tamanho do zip mais recente (sem internet, o botão leva à página das versões)
+fetch("https://api.github.com/repos/victorsimasdev/datasus-extractor/releases/latest")
+  .then((r) => (r.ok ? r.json() : Promise.reject()))
+  .then((rel) => {
+    const zip = (rel.assets || []).find((a) => a.name.endsWith("-windows.zip"));
+    if (!zip) return;
+    document.querySelectorAll("a.baixar").forEach((a) => { a.href = zip.browser_download_url; });
+    const texto = `Versão ${rel.tag_name.replace(/^v/, "")} · ${Math.round(zip.size / 1e6)} MB · Windows 10 ou 11`;
+    document.querySelectorAll(".versao").forEach((s) => { s.textContent = texto; });
+  })
+  .catch(() => {});
+
+// entradas ao rolar
+const io = new IntersectionObserver((es) => es.forEach((e) => {
+  if (e.isIntersecting) { e.target.classList.add("visto"); io.unobserve(e.target); }
+}), { rootMargin: "0px 0px -8% 0px" });
+document.querySelectorAll(".sobe").forEach((el) => io.observe(el));
+
+// como usar: a frase no centro da tela troca o print fixo
+const prints = document.querySelectorAll(".palco img");
+const frases = document.querySelectorAll(".frase");
+const foco = new IntersectionObserver((es) => es.forEach((e) => {
+  if (!e.isIntersecting) return;
+  frases.forEach((f) => f.classList.toggle("ativa", f === e.target));
+  prints.forEach((p, i) => p.classList.toggle("ativa", i === +e.target.dataset.print));
+}), { rootMargin: "-45% 0px -45% 0px" });
+frases.forEach((f) => foco.observe(f));
+</script>
+</body>
+</html>
