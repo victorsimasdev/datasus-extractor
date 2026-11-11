@@ -58,7 +58,8 @@ class LinhaPlanilha:
     rotulo: str  # como aparece na planilha
     uf: str | None
     tipo: str  # "principal", "regioes" ou "separador"
-    chave: str = ""  # para casar com a linha do site (ver chave_linha)
+    chave: str = ""  # rótulo sem o código (ver chave_linha), para casar quando o site escreve diferente
+    site: str = ""  # rótulo como no formulário/site, para casar exato (ver planilha.casar_rotulos)
 
 
 @dataclass
@@ -184,17 +185,17 @@ def planejar(pedido, opcoes=None):
             esperadas, dinamicas = [], True
         if linhas:
             linhas.append(LinhaPlanilha("", uf, "separador"))
-        linhas += [LinhaPlanilha(pre + lbl.upper(), uf, "principal", chave_linha(lbl)) for lbl in esperadas]
+        linhas += [LinhaPlanilha(pre + lbl.upper(), uf, "principal", chave_linha(lbl), lbl) for lbl in esperadas]
         if pular_uf:
             avisos.append(f"{form.caminho_def}: nenhum filtro escolhido existe neste estado; linhas ficam SR")
         if regioes:
             linhas.append(LinhaPlanilha("", uf, "separador"))
-            linhas.append(LinhaPlanilha("BRASIL - TOTAL", uf, "principal", "total"))
-            linhas += [LinhaPlanilha(r, uf, "regioes", chave_linha(r)) for r in REGIOES]
+            linhas.append(LinhaPlanilha("BRASIL - TOTAL", uf, "principal", "total", "Total"))
+            linhas += [LinhaPlanilha(r, uf, "regioes", chave_linha(r), r) for r in REGIOES]
         else:
             if esperadas and not dinamicas:
                 linhas.append(LinhaPlanilha("", uf, "separador"))
-            linhas.append(LinhaPlanilha(pre + "TOTAL", uf, "principal", "total"))
+            linhas.append(LinhaPlanilha(pre + "TOTAL", uf, "principal", "total", "Total"))
         if pular_uf:
             continue
 
@@ -259,7 +260,7 @@ def planejar(pedido, opcoes=None):
                             _, v, _ = converter(campo, it["valores"])
                             for real in v:
                                 vals.append(real)
-                                mapa[chave_linha(form.rotulo_opcao(sel, real))] = it["nome"]
+                                mapa[form.rotulo_opcao(sel, real)] = it["nome"]
                         if vals:
                             for c in cb:
                                 add(form.valor_coluna(col_campo), [c], {sel: vals},
