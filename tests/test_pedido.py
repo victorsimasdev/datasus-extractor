@@ -35,7 +35,7 @@ def test_planilha_fa_usa_coluna_e_filtro_no_mesmo_campo():
     assert sexo.coluna == "Sexo"
     assert sexo.filtros["SSexo"] == ["1", "2"]
     assert sexo.incrementos == ["Internações"]  # coluna ativa: um conteúdo só
-    assert sexo.papel["mapa"] == {"masc": "Masculino", "fem": "Feminino"}
+    assert sexo.papel["mapa"] == {"Masc": "Masculino", "Fem": "Feminino"}
 
 
 def test_planilha_fa_linhas_e_colunas():
