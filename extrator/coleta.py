@@ -48,6 +48,25 @@ def carregar_dados(pasta):
         raise SystemExit(f"ERRO: {e}. Restaure uma cópia de segurança antes de continuar.") from e
 
 
+def _assinatura(consulta):
+    """O que define o resultado de uma consulta no site. A chave (aba, UF, papel, conteúdos) serve para retomar,
+    mas não muda quando o pedido é substituído com outra linha, outros filtros fixos ou outros períodos na aba."""
+    return (consulta.get("caminho_def"), consulta.get("linha"), consulta.get("coluna"),
+            sorted(consulta.get("incrementos") or []), sorted(consulta.get("arquivos") or []),
+            sorted((k, sorted(v)) for k, v in (consulta.get("filtros") or {}).items()))
+
+
+def resultado_vale(consulta, resultado):
+    """True se o resultado salvo é da consulta como ela está no plano agora (e pode ser aproveitado)."""
+    salva = resultado.get("consulta")
+    return salva is None or _assinatura(salva) == _assinatura(consulta.para_dict())
+
+
+def resultados_validos(plano, dados):
+    """Só os resultados das consultas do plano que não mudaram desde que foram coletados."""
+    return {c.chave: dados[c.chave] for c in plano.consultas if c.chave in dados and resultado_vale(c, dados[c.chave])}
+
+
 class Interrompida(Exception):
     """A coleta foi parada a pedido (arquivo PARAR na pasta)."""
 
@@ -63,11 +82,15 @@ def coletar(plano, pasta, headless=True, limite=None):
     gravar_json(pasta / "pedido.json", plano.pedido)
     arq = pasta / "dados.json"
     dados = carregar_dados(pasta)
-    pendentes = [c for c in plano.consultas if c.chave not in dados]
+    validos = resultados_validos(plano, dados)
+    pendentes = [c for c in plano.consultas if c.chave not in validos]
+    mudaram = sum(1 for c in pendentes if c.chave in dados)
+    if mudaram:  # pedido substituído: estas consultas mudaram e o resultado antigo não vale mais
+        print(f"{mudaram} consultas mudaram no pedido desde a última coleta e serão refeitas", flush=True)
     total = len(plano.consultas)
     if limite is not None:
         pendentes = pendentes[:limite]
-    status(pasta, fase="coleta", feitas=total - len(pendentes) if limite is None else len(dados), total=total)
+    status(pasta, fase="coleta", feitas=len(validos), total=total)
     if not pendentes:
         return 0, total
     if (pasta / "PARAR").exists():
@@ -82,7 +105,7 @@ def coletar(plano, pasta, headless=True, limite=None):
                 if (pasta / "PARAR").exists():  # pedido de parada: termina aqui, com tudo salvo
                     (pasta / "PARAR").unlink()
                     raise Interrompida("parada pedida pelo usuário")
-                n = len(dados) + 1
+                n = len(validos) + feitas + 1
                 print(f"[{n}/{total}] {c.aba} | {c.uf or 'Brasil'} | {c.linha_tipo} | {c.chave.split('|')[3]}",
                       flush=True)
                 r = col.consultar(c.para_dict(), destino_evidencia(pasta, c))
@@ -90,7 +113,7 @@ def coletar(plano, pasta, headless=True, limite=None):
                 dados[c.chave] = r
                 gravar_json(arq, dados)
                 feitas += 1
-                status(pasta, fase="coleta", feitas=len(dados), total=total, ultima=c.chave)
+                status(pasta, fase="coleta", feitas=n, total=total, ultima=c.chave)
                 if r["sem_registro"]:
                     print("      Nenhum registro selecionado -> SR", flush=True)
                 else:
