@@ -125,15 +125,33 @@ def _git(*args):
 
 
 def ultima_tag():
+    """A maior tag vX.Y.Z do repositório, mesmo que não esteja no histórico da main.
+
+    Se o histórico da main for reescrito, as tags antigas ficam fora dele; procurar só as alcançáveis
+    (git describe) devolveria uma versão já lançada e a release falharia com "tag already exists".
+    """
+    tags = [t for t in _git("tag", "--list", "v[0-9]*").split() if RE_VERSAO.match(t[1:])]
+    return max(tags, key=lambda t: _tupla(t[1:]), default=None)
+
+
+def _no_historico(tag, ate):
     try:
-        return _git("describe", "--tags", "--abbrev=0", "--match", "v[0-9]*").strip()
+        _git("merge-base", "--is-ancestor", tag, ate)
+        return True
     except subprocess.CalledProcessError:
-        return None
+        return False
 
 
 def commits_desde(tag, ate="HEAD"):
-    faixa = f"{tag}..{ate}" if tag else ate
-    saida = _git("log", faixa, "--no-merges", "--name-only", "--format=%x1e%s%x1f%b%x1f")
+    if not tag:
+        faixa = [ate]
+    elif _no_historico(tag, ate):
+        faixa = [f"{tag}..{ate}"]
+    else:
+        # tag fora do histórico (main reescrita): ignora os commits que só mudaram de hash, com o
+        # mesmo conteúdo de um commit que já está na tag
+        faixa = [f"{tag}...{ate}", "--right-only", "--cherry-pick"]
+    saida = _git("log", *faixa, "--no-merges", "--name-only", "--format=%x1e%s%x1f%b%x1f")
     commits = []
     for bloco in saida.split("\x1e"):
         if not bloco.strip():

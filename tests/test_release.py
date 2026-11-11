@@ -143,3 +143,30 @@ def test_commits_desde_traz_os_arquivos(tmp_path, monkeypatch):
     assert release.ultima_tag() == "v2.0.0"
     assert release.commits_desde("v2.0.0") == [("chore: bump pypdf from 6.21.4 to 7.0.0", "corpo",
                                                ("requirements.txt",))]
+
+
+def test_tag_fora_do_historico_depois_de_reescrever_a_main(tmp_path, monkeypatch):
+    import subprocess
+
+    def git(*args):
+        return subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", *args], cwd=tmp_path,
+                              check=True, capture_output=True, text=True).stdout.strip()
+
+    git("init", "-q", "-b", "main")
+    (tmp_path / "a.txt").write_text("a", encoding="utf-8")
+    git("add", "."); git("commit", "-q", "-m", "feat: início"); git("tag", "v2.0.0")
+    (tmp_path / "b.txt").write_text("b", encoding="utf-8")
+    git("add", "."); git("commit", "-q", "-m", "fix: corrige b", "-m", "Trailer: x"); git("tag", "v2.0.1")
+    # reescreve o último commit (só a mensagem muda): a v2.0.1 fica fora do histórico da main
+    git("commit", "-q", "--amend", "-m", "fix: corrige b")
+    monkeypatch.setattr(release, "RAIZ", tmp_path)
+    monkeypatch.setattr(release, "versao_no_codigo", lambda: None)
+
+    assert release.ultima_tag() == "v2.0.1"
+    assert release.commits_desde("v2.0.1") == []
+    assert release.calcular() == ""
+
+    (tmp_path / "c.txt").write_text("c", encoding="utf-8")
+    git("add", "."); git("commit", "-q", "-m", "fix: corrige c")
+    assert [c[0] for c in release.commits_desde("v2.0.1")] == ["fix: corrige c"]
+    assert release.calcular() == "2.0.2"
