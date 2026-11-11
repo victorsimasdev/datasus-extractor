@@ -10,6 +10,7 @@ Monta a planilha do pedido a partir dos resultados coletados.
   site). A conferência independente usa essa aba para reler cada valor no PDF.
 """
 import re
+from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -66,9 +67,9 @@ def _fontes(plano):
                     if p["tipo"] == "bloco":
                         site = next((s for s, nome in p["mapa"].items() if nome == col.subcoluna), None)
                     else:
-                        site = chave_linha(col.subcoluna)
+                        site = col.subcoluna
                     if site is not None:
-                        f[i] = (c.chave, ("chave", site))
+                        f[i] = (c.chave, ("rotulo", site))
     return fontes
 
 
@@ -99,12 +100,38 @@ def _expandir_dinamicos(plano, dados):
                                 vistos.append(row[0])
                 pre = lin.rotulo[:-len("TOTAL")] if lin.rotulo.endswith("TOTAL") and lin.rotulo != "TOTAL" else ""
                 from .pedido import LinhaPlanilha
-                novas += [LinhaPlanilha(pre + v.upper(), lin.uf, "principal", chave_linha(v)) for v in vistos]
+                novas += [LinhaPlanilha(pre + v.upper(), lin.uf, "principal", chave_linha(v), v) for v in vistos]
                 if vistos:
                     novas.append(LinhaPlanilha("", lin.uf, "separador"))
             novas.append(lin)
         linhas = novas
     return colunas, linhas
+
+
+def casar_rotulos(procurados, site):
+    """Casa rótulos da planilha com os do site: {índice em procurados: índice em site}.
+
+    Primeiro pelo rótulo exato (sem acentos/maiúsculas). Sem o código do começo (chave_linha: '12 Acre' x
+    'Acre', '1 Região Norte' x 'NORTE') só quando essa chave é única dos dois lados: estabelecimentos e
+    procedimentos com o mesmo nome e códigos diferentes, ou '8 a 11 anos' x '9 a 11 anos', nunca se
+    misturam. Sem par seguro, o rótulo fica sem casar (vira SR, e a conferência confere o SR).
+    """
+    norm = [normaliza(s) for s in site]
+    out, usados = {}, set()
+    for i, p in enumerate(procurados):
+        achados = [j for j, s in enumerate(norm) if s == normaliza(p)]
+        if len(achados) == 1:
+            out[i] = achados[0]
+            usados.add(achados[0])
+    chaves_site = [chave_linha(s) for s in site]
+    n_proc, n_site = Counter(chave_linha(p) for p in procurados), Counter(chaves_site)
+    for i, p in enumerate(procurados):
+        k = chave_linha(p)
+        if i not in out and n_proc[k] == 1 and n_site[k] == 1:
+            j = chaves_site.index(k)
+            if j not in usados:
+                out[i] = j
+    return out
 
 
 def montar(plano, dados):
@@ -114,6 +141,29 @@ def montar(plano, dados):
     m = Montagem(abas=plano.abas, linhas=linhas, colunas=colunas)
     m.faltando = [c.chave for c in plano.consultas if c.chave not in dados]
     m.problemas = [p for c in plano.consultas if c.chave in dados for p in dados[c.chave].get("problemas", [])]
+    # rótulos da planilha que cada consulta precisa achar no site (linhas por uf/tipo; colunas de categorias)
+    linhas_de = {}
+    for il, lin in enumerate(linhas):
+        if lin.tipo != "separador":
+            linhas_de.setdefault((lin.uf, lin.tipo), []).append(il)
+    cols_de = {}
+    for f in fontes.values():
+        for chave, col_site in f.values():
+            if isinstance(col_site, tuple) and col_site[1] not in cols_de.setdefault(chave, []):
+                cols_de[chave].append(col_site[1])
+    casados = {}
+
+    def casamento(chave, r, uf, tipo):
+        """(linha da planilha -> linha do site, rótulo de coluna -> índice no cabeçalho), uma vez por consulta."""
+        if (chave, uf, tipo) not in casados:
+            ils = linhas_de.get((uf, tipo), [])
+            ok = casar_rotulos([linhas[il].site or linhas[il].rotulo for il in ils], [x[0] for x in r["linhas"]])
+            por_linha = {ils[i]: r["linhas"][j] for i, j in ok.items()}
+            rots = cols_de.get(chave, [])
+            ok = casar_rotulos(rots, r["colunas"][1:])
+            casados[(chave, uf, tipo)] = (por_linha, {rots[i]: j + 1 for i, j in ok.items()})
+        return casados[(chave, uf, tipo)]
+
     for aba in plano.abas:
         for il, lin in enumerate(linhas):
             if lin.tipo == "separador":
@@ -132,11 +182,12 @@ def montar(plano, dados):
                     m.celulas[(aba, il, ic)] = Celula(SR, consulta=chave, motivo="nenhum registro selecionado")
                     continue
                 cab = r["colunas"]
+                por_linha, por_coluna = casamento(chave, r, lin.uf, lin.tipo)
                 if isinstance(col_site, tuple):
-                    j = next((k for k, s in enumerate(cab) if k > 0 and chave_linha(s) == col_site[1]), None)
+                    j = por_coluna.get(col_site[1])
                 else:
                     j = next((k for k, s in enumerate(cab) if k > 0 and normaliza(s) == normaliza(col_site)), None)
-                row = next((x for x in r["linhas"] if chave_linha(x[0]) == lin.chave), None)
+                row = por_linha.get(il)
                 if j is None or row is None:
                     m.celulas[(aba, il, ic)] = Celula(SR, consulta=chave, rotulo_site=row[0] if row else "",
                                                       coluna_site=(j - 1) if j else -1, colunas_site=len(cab) - 1,

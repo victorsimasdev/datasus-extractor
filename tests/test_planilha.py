@@ -103,3 +103,61 @@ def test_layout_por_periodo(plano, tmp_path):
     assert [ws.cell(1, i).value for i in range(1, 7)] == ["ESTADOS", "Internações", "Óbitos", None, "INTERNAÇÕES", "SEXO"]
     assert [ws.cell(2, i).value for i in (6, 7)] == ["Masculino", "Feminino"]
     assert ws.cell(3, 1).value == "ACRE" and ws.cell(3, 3).value == SR
+
+
+# ---------------------------------------------------------------- rótulos com o mesmo nome
+def test_casar_rotulos_exato_antes_da_chave_sem_codigo():
+    from extrator.planilha import casar_rotulos
+
+    # exato primeiro; sem o código só quando é único dos dois lados
+    assert casar_rotulos(["Acre", "NORTE", "Total"], ["12 Acre", "1 Região Norte", "Total"]) == {0: 0, 1: 1, 2: 2}
+    # '8 a 11 anos' e '9 a 11 anos' viram a mesma chave ('a 11 anos'): só o exato vale
+    assert casar_rotulos(["8 a 11 anos", "9 a 11 anos"], ["9 a 11 anos", "8 a 11 anos"]) == {0: 1, 1: 0}
+    # o site não trouxe o 2º hospital: ele não pode pegar a linha do 1º
+    assert casar_rotulos(["111 HOSPITAL X", "222 HOSPITAL X"], ["111 HOSPITAL X", "Total"]) == {0: 0}
+    # nome repetido sem código dos dois lados: ambíguo, nada casa
+    assert casar_rotulos(["HOSPITAL X"], ["111 HOSPITAL X", "222 HOSPITAL X"]) == {}
+
+
+def test_estabelecimentos_com_o_mesmo_nome_nao_trocam_valores():
+    from extrator.formularios import Formulario
+
+    form = Formulario("sih", "ba")
+    per = form.campos["Arquivos"][0][1]
+    plano = planejar({"nome": "t", "base": "sih", "abrangencia": "estadual", "estados": ["ba"],
+                      "linha": "Estabelecimento", "conteudos": ["Internações"],
+                      "periodos": [{"tipo": "separada", "nome": per, "valores": [per]}], "filtros": {}})
+    a, b = "2470349 HOSPITAL SAO LUCAS", "2601583 HOSPITAL SAO LUCAS"
+    c = plano.consultas[0]
+    m = montar(plano, {c.chave: resultado(["Estabelecimento", "Internações"],
+                                          [[a, "100"], [b, "7"], ["Total", "107"]])})
+    valores = {lin.rotulo: m.celulas[(per, il, 0)] for il, lin in enumerate(m.linhas) if lin.tipo != "separador"}
+    assert (valores[a].valor, valores[a].rotulo_site) == (100, a)
+    assert (valores[b].valor, valores[b].rotulo_site) == (7, b)
+    assert valores["2802120 HOSPITAL SAO LUCAS"].valor == SR  # não veio no site: SR, nunca o valor de outro
+    assert valores["2802120 HOSPITAL SAO LUCAS"].motivo == "linha ausente no site"
+
+
+def test_coluna_ativa_com_categorias_que_so_diferem_no_numero():
+    from extrator.formularios import Formulario
+
+    form = Formulario("sim", None)
+    per = form.campos["Arquivos"][0][1]
+    plano = planejar({"nome": "t", "base": "sim", "abrangencia": "nacional", "linha": "Unidade da Federação",
+                      "colunas": ["Escolaridade"], "conteudos": ["Óbitos p/Residênc"],
+                      "periodos": [{"tipo": "separada", "nome": per, "valores": [per]}], "filtros": {}})
+    cats = [lbl for _, lbl in form.categorias("Escolaridade")]
+    assert "8 a 11 anos" in cats and "9 a 11 anos" in cats
+    dados = {}
+    for c in plano.consultas:
+        if c.coluna == "--Não-Ativa--":
+            dados[c.chave] = resultado(["Unidade da Federação", "Óbitos p/Residênc"], [["12 Acre", "50"], ["Total", "50"]])
+        else:
+            vals = [str(10 + i) for i in range(len(cats))]
+            dados[c.chave] = resultado(["Unidade da Federação", *cats, "Total"], [["12 Acre", *vals, "x"]])
+    m = montar(plano, dados)
+    il = next(i for i, lin in enumerate(m.linhas) if lin.rotulo == "ACRE")
+    por_sub = {col.subcoluna: m.celulas[(per, il, ic)].valor for ic, col in enumerate(m.colunas)
+               if col.grupo == "ESCOLARIDADE"}
+    assert por_sub["8 a 11 anos"] == 10 + cats.index("8 a 11 anos")
+    assert por_sub["9 a 11 anos"] == 10 + cats.index("9 a 11 anos")
