@@ -14,7 +14,7 @@ from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .coleta import slug
+from .coleta import resultados_validos, slug
 from .formularios import normaliza
 from .pedido import ColunaPlanilha, chave_linha
 from .tabnet import casas_decimais, descrever_filtros, num_br
@@ -135,6 +135,7 @@ def casar_rotulos(procurados, site):
 
 
 def montar(plano, dados):
+    dados = resultados_validos(plano, dados)  # resultado de uma consulta que mudou no pedido conta como não coletado
     colunas, linhas = _expandir_dinamicos(plano, dados)
     plano_exp = type(plano)(**{**plano.__dict__, "colunas": colunas})
     fontes = _fontes(plano_exp)
@@ -377,6 +378,7 @@ def gravar(plano, montagem, dados, destino):
 
 
 def gerar(plano, dados, pasta):
+    dados = resultados_validos(plano, dados)
     m = montar(plano, dados)
     destino = Path(pasta) / f"{slug(plano.pedido['nome'])}.xlsx"
     if not m.faltando:
